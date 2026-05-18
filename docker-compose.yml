@@ -1,13 +1,15 @@
 version: '3.8'
 
 services:
-  kanban:
+  mural-k:
+    image: katzzero/mural-k
     build: .
+    container_name: mural-k
     ports:
       - "8080:5000"
     volumes:
-      - kanban-data:/data
+      - mural-k-data:/data
     restart: unless-stopped
 
 volumes:
-  kanban-data:
+  mural-k-data:
