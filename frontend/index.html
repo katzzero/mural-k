@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mural Kanban</title>
+<style>
+:root { --bg: #0079bf; --radius: 12px; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: system-ui, sans-serif; background: var(--bg); min-height: 100vh; padding: 20px; }
+.top { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 20px; }
+.top h1 { color: #fff; font-size: 28px; font-weight: 700; cursor: pointer; padding: 4px 12px; border-radius: 8px; transition: background 0.15s; user-select: none; }
+.top h1:hover { background: rgba(255,255,255,0.15); }
+.settings-btn { background: rgba(255,255,255,0.25); border: none; color: #fff; font-size: 22px; width: 44px; height: 44px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+.settings-btn:hover { background: rgba(255,255,255,0.4); }
+.board { display: flex; gap: 16px; overflow-x: auto; padding: 10px 0; min-height: calc(100vh - 140px); align-items: flex-start; }
+.col { background: #dfe1e6; border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.15); max-height: calc(100vh - 160px); }
+.col.dragging-col { outline: 2px dashed #fff; outline-offset: -2px; }
+.col-head { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; flex-shrink: 0; position: sticky; top: 0; }
+.col-head input { flex: 1; font-weight: 700; font-size: 14px; background: transparent; border: none; color: #1d1d1f; padding: 6px 8px; border-radius: 6px; }
+.col-head input:hover { background: rgba(0,0,0,0.06); }
+.col-count { font-size: 12px; background: rgba(0,0,0,0.1); border-radius: 10px; padding: 2px 8px; font-weight: 700; min-width: 22px; text-align: center; flex-shrink: 0; }
+.col-btns { gap: 2px; flex-shrink: 0; }
+.col-btns button { background: rgba(255,255,255,0.3); border: none; font-size: 14px; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; color: #444; display: flex; align-items: center; justify-content: center; }
+.col-btns button:hover { background: rgba(255,255,255,0.5); }
+.col-body { flex: 1; display: flex; flex-direction: column; min-height: 30px; overflow-y: auto; overflow-x: hidden; }
+.card { background: #fff; border-radius: var(--radius); padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); position: relative; cursor: grab; margin-bottom: 8px; }
+.card:active { cursor: grabbing; }
+.card-title { font-size: 14px; color: #1d1d1f; }
+.card-desc { font-size: 12px; color: #555; margin-top: 6px; padding: 4px 8px; background: rgba(0,0,0,0.05); border-radius: 4px; }
+.card-act { position: absolute; top: 6px; right: 6px; display: none; gap: 4px; background: rgba(240,242,245,0.92); padding: 3px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); z-index: 10; }
+.card:hover .card-act { display: flex; }
+.card-act button { background: transparent; border: none; font-size: 13px; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; color: #555; display: flex; align-items: center; justify-content: center; }
+.card-act button:hover { background: rgba(0,0,0,0.1); }
+.card-act .del:hover { background: #ffebee; color: #d32f2f; }
+.trash-btn { position: fixed; bottom: 24px; left: 24px; width: 52px; height: 52px; border-radius: 50%; border: none; background: rgba(255,255,255,0.9); box-shadow: 0 2px 12px rgba(0,0,0,0.15); cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center; color: #555; transition: all 0.2s; z-index: 100; }
+.trash-btn:hover { background: #fff; transform: scale(1.1); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+.trash-count { position: absolute; top: -6px; right: -6px; background: #d32f2f; color: #fff; font-size: 11px; font-weight: 700; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; justify-content: center; align-items: flex-start; padding-top: 8vh; overflow-y: auto; }
+.modal-overlay.show { display: flex; }
+.modal-box { background: #fff; border-radius: 16px; padding: 28px; width: 90%; max-width: 520px; box-shadow: 0 12px 40px rgba(0,0,0,0.3); margin-bottom: 8vh; }
+.modal-box h3 { color: #1d1d1f; font-size: 20px; margin-bottom: 16px; }
+.modal-box label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-top: 14px; margin-bottom: 6px; }
+.modal-box input, .modal-box textarea, .modal-box select { width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; margin: 4px 0; }
+.modal-box textarea { min-height: 60px; resize: vertical; }
+.modal-box select { cursor: pointer; }
+.modal-box input[type="color"] { width: 48px; height: 36px; cursor: pointer; padding: 2px; }
+.modal-box input[type="radio"] { width: auto; margin-right: 6px; }
+.colors { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 8px 0; }
+.swatch { width: 100%; aspect-ratio: 1; border-radius: 8px; border: 2px solid #e0e0e0; cursor: pointer; }
+.swatch:hover { transform: scale(1.1); }
+.swatch.sel { border-color: #0079bf; box-shadow: 0 0 0 2px rgba(0,121,191,0.3); }
+.palette-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin: 10px 0; }
+.palette-picker input[type="color"] { width: 100%; height: 32px; border-radius: 8px; cursor: pointer; padding: 0; margin: 0; }
+.radio-group { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; }
+.radio-group label { display: flex; align-items: center; gap: 6px; font-weight: 400; font-size: 13px; color: #333; cursor: pointer; margin: 0; padding: 6px 8px; border-radius: 6px; }
+.radio-group label:hover { background: #f0f2f5; }
+.radio-desc { font-size: 11px; color: #999; margin-left: 24px; margin-top: -4px; }
+.width-input-wrap { display: none; margin-top: 8px; }
+.width-input-wrap.show { display: flex; align-items: center; gap: 8px; }
+.width-input-wrap input[type="number"] { width: 100px; padding: 8px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
+.width-input-wrap span { font-size: 13px; color: #777; }
+.range-row { display: flex; align-items: center; gap: 10px; }
+.range-row input { flex: 1; cursor: pointer; }
+.range-val { font-size: 13px; color: #777; min-width: 36px; text-align: center; }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px; }
+.modal-btns button { padding: 10px 28px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.btn-ok { background: #0079bf; color: #fff; }
+.btn-ok:hover { background: #026aa7; }
+.btn-cancel { background: #e8eaed; color: #1d1d1f; }
+.btn-cancel:hover { background: #d2d5d9; }
+.btn-danger { background: #d32f2f; color: #fff; }
+.btn-danger:hover { background: #b71c1c; }
+@media (max-width: 768px) { .board { flex-wrap: wrap; } .col { min-width: 100%; } }
+</style>
+</head>
+<body>
+
+<div class="top">
+    <h1 id="muralTitle" onclick="editTitle()">Mural Kanban</h1>
+    <button class="settings-btn" onclick="openGlobalModal()">&#9881;</button>
+</div>
+<div class="board" id="board"></div>
+
+<button class="trash-btn" id="trashBtn" onclick="openTrashModal()" title="Arraste um card para excluir" ondragover="event.preventDefault();event.dataTransfer.dropEffect='move';this.style.transform='scale(1.3)';this.style.background='#d32f2f';this.style.color='#fff';" ondragleave="this.style.transform='';this.style.background='';this.style.color='';" ondrop="event.preventDefault();event.stopPropagation();this.style.transform='';this.style.background='';this.style.color='';if(typeof dragData!=='undefined'&&dragData){var cid=dragData.id;dragData=null;fetch('/api/cards/'+cid,{method:'DELETE'}).then(function(){location.reload();});}">
+    &#128465;
+    <span class="trash-count" id="trashCount" style="display:none">0</span>
+</button>
+
+<div class="modal-overlay" id="cardModal">
+    <div class="modal-box">
+        <h3 id="cardModalTitle">Nova tarefa</h3>
+        <label>Título</label><input type="text" id="cardModalTitleInput" placeholder="O que precisa ser feito?">
+        <label>Descrição</label><textarea id="cardModalDesc" placeholder="Detalhes adicionais"></textarea>
+        <label>Lista de tarefas</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <input type="text" id="todoInput" placeholder="Nova tarefa..." style="flex:1;margin:0;">
+            <button class="btn-cancel" onclick="addTodoItem()" style="white-space:nowrap;flex-shrink:0;display:flex;align-items:center;">Adicionar</button>
+        </div>
+        <div id="todoList" style="max-height:180px;overflow-y:auto;margin-bottom:8px;"></div>
+        <label>Cor</label><div class="colors" id="cardModalColors"></div>
+        <div class="modal-btns"><button class="btn-ok" onclick="saveCard()">OK</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="colModal">
+    <div class="modal-box">
+        <h3>Configurações da coluna</h3>
+        <label>Cor de fundo</label><div class="colors" id="colModalColors"></div>
+        <label>Cor de destaque (lateral)</label><input type="color" id="colModalAccent">
+        <div id="colWidthInput" style="display:none">
+            <label>Largura proporcional (%)</label>
+            <div class="range-row">
+                <input type="range" id="colWidthPct" min="10" max="100" value="50">
+                <span class="range-val" id="colWidthPctVal">50%</span>
+            </div>
+        </div>
+        <div class="modal-btns"><button class="btn-ok" onclick="okColSettings()">OK</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="globalModal">
+    <div class="modal-box">
+        <h3>Configurações gerais</h3>
+
+        <label>Nome do mural</label>
+        <input type="text" id="globalName" value="Mural Kanban">
+
+        <label>Cor de fundo</label>
+        <input type="color" id="globalBg" value="#0079bf">
+
+        <label>Arredondamento dos cards e colunas</label>
+        <div class="range-row">
+            <input type="range" id="globalRadius" min="0" max="20" value="12">
+            <span class="range-val" id="globalRadiusVal">12px</span>
+        </div>
+
+        <label>Largura das colunas</label>
+        <div class="radio-group">
+            <label><input type="radio" name="widthMode" value="fit"> Encaixar (divide a tela igualmente)</label>
+            <label><input type="radio" name="widthMode" value="absolute"> Fixa em pixels</label>
+            <div class="width-input-wrap" id="absoluteWidthWrap">
+                <input type="number" id="absoluteWidth" value="280" min="100" max="2000">
+                <span>px</span>
+            </div>
+            <label><input type="radio" name="widthMode" value="proportional"> Proporcional (configurar em cada coluna)</label>
+        </div>
+
+        <hr style="margin:20px 0;border:none;border-top:1px solid #e0e0e0;">
+        <label style="margin-top:0;">Adicionar coluna</label>
+        <div style="display:flex;gap:8px;">
+            <input type="text" id="addColName" placeholder="Nome da nova coluna" style="flex:1;margin:0;">
+            <button class="btn-cancel" onclick="addColFromSettings()" style="white-space:nowrap;flex-shrink:0;display:flex;align-items:center;">Adicionar</button>
+        </div>
+
+        <hr style="margin:20px 0;border:none;border-top:1px solid #e0e0e0;">
+        <label style="margin-top:0;">Gerenciar colunas</label>
+        <p style="font-size:12px;color:#999;margin-bottom:10px;">Clique no ✕ para excluir a coluna</p>
+        <div id="colManagerList" style="max-height:220px;overflow-y:auto;margin-bottom:12px;"></div>
+
+        <hr style="margin:20px 0;border:none;border-top:1px solid #e0e0e0;">
+
+        <label style="margin-top:0;">Cores predefinidas</label>
+        <p style="font-size:12px;color:#999;margin-bottom:8px;">Altere as cores dispon&iacute;veis na paleta</p>
+        <div class="palette-picker" id="palettePicker"></div>
+
+        <div class="modal-btns"><button class="btn-ok" onclick="okGlobal()">OK</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="trashModal">
+    <div class="modal-box">
+        <h3>&#128465; Lixeira</h3>
+        <div id="trashList" style="min-height:60px;"></div>
+        <div class="modal-btns"><button class="btn-ok" onclick="closeTrashModal()">OK</button></div>
+    </div>
+</div>
+
+<script>
+var API = '/api';
+var columns = [];
+var editColId = null;
+var editCardColId = null;
+var editCardId = null;
+var selectedCardColor = '#ffffff';
+var selectedColColor = '#dfe1e6';
+var globalSettings = {};
+var trashCount = 0;
+var dragData = null;
+
+try { var g = localStorage.getItem('kanban-settings'); if(g) globalSettings = JSON.parse(g); } catch(e){}
+if(!globalSettings || typeof globalSettings !== 'object') globalSettings = {};
+var widthMode = globalSettings.widthMode || 'fit';
+var absWidth = globalSettings.absWidth || 280;
+var palette = globalSettings.palette || ['#ffffff','#ffebee','#fff3e0','#e8f5e9','#e3f2fd','#f3e5f5','#fffde7','#e0f7fa','#fbe9e7','#f1f8e9','#ede7f6','#eceff1'];
+
+// --- API ---
+function api(url, opts){
+    opts = opts || {};
+    if(!opts.headers) opts.headers = {};
+    if(opts.body) opts.headers['Content-Type'] = 'application/json';
+    return fetch(API + url, opts).then(function(r){
+        if(r.status===204) return null;
+        if(!r.ok) return null;
+        return r.json();
+    });
+}
+
+// --- SETTINGS ---
+function applySettings(){
+    if(globalSettings.bg) document.documentElement.style.setProperty('--bg', globalSettings.bg);
+    var r = parseInt(globalSettings.radius,10) || 12;
+    document.documentElement.style.setProperty('--radius', r+'px');
+    if(globalSettings.name) document.getElementById('muralTitle').textContent = globalSettings.name;
+}
+
+function saveGlobalState(){
+    localStorage.setItem('kanban-settings', JSON.stringify(globalSettings));
+    applySettings();
+}
+
+// --- COLUMN WIDTH ---
+function colWidth(col){
+    if(widthMode === 'fit') return {flex:'1', min:'200px'};
+    else if(widthMode === 'absolute') return {flex:'none', min:absWidth+'px', max:absWidth+'px'};
+    else if(widthMode === 'proportional'){
+        var pct = parseInt(col.width, 10) || Math.round(100/(columns.length||1));
+        return {flex:'none', min:'100px', width:pct+'%', max:pct+'%'};
+    }
+    return {flex:'1', min:'200px'};
+}
+
+// --- TRASH ---
+function loadTrash(){
+    api('/cards/trash').then(function(cards){
+        trashCount = cards ? cards.length : 0;
+        var cnt = document.getElementById('trashCount');
+        if(trashCount > 0){ cnt.style.display='flex'; cnt.textContent=trashCount; }
+        else cnt.style.display='none';
+    });
+}
+
+// --- RENDER ---
+function renderBoard(){
+    var board = document.getElementById('board');
+    board.innerHTML = '';
+    columns.sort(function(a,b){ return a.order_index - b.order_index; });
+    for(var i=0;i<columns.length;i++) renderCol(columns[i]);
+}
+
+function renderCol(c){
+    var col = document.createElement('div');
+    col.className = 'col';
+    col.setAttribute('data-cid', c.id);
+    var bg = c.background_color || '#dfe1e6';
+    var acc = c.accent_color || '#90a4ae';
+    col.style.backgroundColor = bg;
+    col.style.borderLeft = '4px solid ' + acc;
+    var w = colWidth(c);
+    col.style.flex = w.flex;
+    col.style.minWidth = w.min;
+    if(w.max) col.style.maxWidth = w.max;
+    if(w.width) col.style.width = w.width;
+
+    col.addEventListener('dragenter', function(e){ e.preventDefault(); });
+    col.addEventListener('dragover', function(e){
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        col.classList.add('dragging-col');
+        if(!dragData) return;
+        var body = col.querySelector('.col-body');
+        if(!body) return;
+        var prev = body.querySelector('.card-preview');
+        if(!prev){
+            prev = document.createElement('div');
+            prev.className = 'card card-preview';
+            prev.style.backgroundColor = dragData.color || '#fff';
+            prev.style.border = '2px dashed #0079bf';
+            prev.style.pointerEvents = 'none';
+            var t = document.createElement('div'); t.className='card-title'; t.textContent=dragData.title; prev.appendChild(t);
+            if(dragData.desc){ var de=document.createElement('div');de.className='card-desc';de.textContent=dragData.desc;prev.appendChild(de);}
+            body.appendChild(prev);
+        }
+        var cards = body.querySelectorAll('.card:not(.card-preview)');
+        var inserted = false;
+        for(var i=0;i<cards.length;i++){
+            var rect = cards[i].getBoundingClientRect();
+            if(e.clientY < rect.top + rect.height/2){ body.insertBefore(prev, cards[i]); inserted=true; break; }
+        }
+        if(!inserted) body.appendChild(prev);
+    });
+    col.addEventListener('dragleave', function(e){
+        if(!col.contains(e.relatedTarget)){
+            col.classList.remove('dragging-col');
+            var p = col.querySelector('.card-preview'); if(p) p.remove();
+        }
+    });
+    col.addEventListener('drop', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        col.classList.remove('dragging-col');
+        var p = col.querySelector('.card-preview'); if(p) p.remove();
+        if(!dragData) return;
+        var cardId = dragData.id;
+        var targetColId = c.id;
+        api('/columns/'+targetColId+'/cards').then(function(cards){
+            if(!cards) return;
+            var max=0; for(var i=0;i<cards.length;i++) if(cards[i].order_index>max) max=cards[i].order_index;
+            api('/cards/'+cardId,{method:'PUT',body:JSON.stringify({column_id:targetColId,order_index:max+1})}).then(function(){
+                refresh();
+            });
+        });
+    });
+
+    var h = document.createElement('div'); h.className='col-head';
+    var ti = document.createElement('input'); ti.type='text'; ti.value=c.title||'';
+    ti.onchange=function(){ api('/columns/'+c.id,{method:'PUT',body:JSON.stringify({title:ti.value.trim()||c.title})}).then(refresh); };
+    ti.onblur=function(){ti.value=ti.value.trim()||c.title;};
+    var cnt = document.createElement('span'); cnt.className='col-count'; cnt.id='cnt-'+c.id; cnt.textContent='0';
+    var btns = document.createElement('div'); btns.className='col-btns';
+    var setBtn = document.createElement('button'); setBtn.textContent='\u2699'; setBtn.title='Configurar coluna';
+    setBtn.onclick=function(e){e.stopPropagation();e.preventDefault();openColModal(c);};
+    btns.appendChild(setBtn);
+    h.appendChild(ti); h.appendChild(cnt); h.appendChild(btns); col.appendChild(h);
+    var body = document.createElement('div'); body.className='col-body'; body.id='body-'+c.id; col.appendChild(body);
+    var acb = document.createElement('button');
+    acb.style.cssText='background:none;border:none;color:#444;padding:8px;border-radius:8px;text-align:left;font-size:13px;width:100%;cursor:pointer;flex-shrink:0;';
+    acb.textContent='+ Adicionar tarefa';
+    acb.onclick=function(e){e.stopPropagation();openCardModal(c.id);};
+    col.appendChild(acb);
+    var board = document.getElementById('board');
+    board.appendChild(col);
+
+    api('/columns/'+c.id+'/cards').then(function(cards){
+        if(!cards) return;
+        cnt.textContent=cards.length;
+        cards.sort(function(a,b){return a.order_index-b.order_index;});
+        for(var i=0;i<cards.length;i++) renderCard(cards[i], body);
+    });
+}
+
+function renderCard(c, container){
+    var d = document.createElement('div'); d.className='card'; d.draggable=true; d.setAttribute('data-card',c.id);
+    d.style.backgroundColor=c.color||'#ffffff';
+    d.addEventListener('dragstart',function(e){
+        e.dataTransfer.effectAllowed='move';
+        e.dataTransfer.setData('text/plain',String(c.id));
+        dragData={id:c.id,colId:c.column_id,title:c.title,desc:c.description,color:c.color,el:d,container:container};
+        d.style.opacity='0.2';
+    });
+    d.addEventListener('dragend',function(){
+        document.querySelectorAll('.card-preview').forEach(function(e){e.remove();});
+        document.querySelectorAll('.dragging-col').forEach(function(e){e.classList.remove('dragging-col');});
+        if(dragData&&dragData.el) dragData.el.style.opacity='1';
+        dragData=null;
+    });
+    var t=document.createElement('div'); t.className='card-title'; t.textContent=c.title; d.appendChild(t);
+    if(c.description){var de=document.createElement('div');de.className='card-desc';de.textContent=c.description;d.appendChild(de);}
+    var act=document.createElement('div');act.className='card-act';
+    var eb=document.createElement('button');eb.textContent='\u270E';eb.title='Editar';
+    eb.onclick=function(e){e.stopPropagation();openCardModal(c.column_id,c.id);};
+    act.appendChild(eb);d.appendChild(act);container.appendChild(d);
+}
+
+function refresh(){
+    api('/columns').then(function(data){
+        if(data){columns=data;renderBoard();}loadTrash();
+    }).catch(function(){loadTrash();});
+}
+
+// --- ADD COLUMN ---
+function addColFromSettings(){
+    var input=document.getElementById('addColName');
+    var name=input.value.trim(); if(!name) return;
+    input.value='';
+    var w = (widthMode==='proportional') ? Math.round(100/(columns.length+1)) : 280;
+    api('/columns',{method:'POST',body:JSON.stringify({title:name,width:w,
+        background_color:palette[Math.floor(Math.random()*palette.length)],
+        accent_color:palette[Math.floor(Math.random()*palette.length)]
+    })}).then(function(col){if(col){columns.push(col);renderBoard();buildColManager();}});
+}
+
+// --- PALETTE ---
+function buildPalette(containerId,selected,callback){
+    var cont=document.getElementById(containerId); if(!cont) return;
+    cont.innerHTML='';
+    for(var idx=0;idx<palette.length;idx++){
+        var color=palette[idx];
+        var s=document.createElement('div');
+        s.className='swatch'+(color===selected?' sel':'');
+        s.style.backgroundColor=color;
+        s.onclick=(function(c){return function(){
+            var p=this.parentNode; if(p) p.querySelectorAll('.swatch').forEach(function(e){e.className='swatch';});
+            this.className='swatch sel'; if(typeof callback==='function') callback(c);
+        };})(color);
+        cont.appendChild(s);
+    }
+}
+
+// --- CARD MODAL ---
+var pendingTodos = [];
+
+function buildTodoList(todos){
+    var list=document.getElementById('todoList'); list.innerHTML='';
+    pendingTodos=todos?todos.slice():[];
+    for(var i=0;i<pendingTodos.length;i++){
+        (function(idx){
+            var item=document.createElement('div');
+            item.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;margin-bottom:4px;background:#f8f9fa;';
+            var chk=document.createElement('input');chk.type='checkbox';
+            chk.style.cssText='width:16px;height:16px;cursor:pointer;flex-shrink:0;';
+            chk.checked=!!pendingTodos[idx].checked;
+            chk.onchange=function(){
+                pendingTodos[idx].checked=this.checked?1:0;
+                textEl.style.textDecoration=this.checked?'line-through':'none';
+                textEl.style.color=this.checked?'#999':'#1d1d1f';
+            };
+            var textEl=document.createElement('span');
+            textEl.style.cssText='flex:1;font-size:13px;color:#1d1d1f;word-break:break-word;';
+            textEl.textContent=pendingTodos[idx].text;
+            if(pendingTodos[idx].checked){textEl.style.textDecoration='line-through';textEl.style.color='#999';}
+            var del=document.createElement('button');del.textContent='\u2715';
+            del.style.cssText='background:transparent;border:none;font-size:13px;cursor:pointer;color:#999;padding:2px 6px;border-radius:4px;flex-shrink:0;';
+            del.onmouseover=function(){this.style.background='#ffebee';this.style.color='#d32f2f';};
+            del.onmouseout=function(){this.style.background='';this.style.color='#999';};
+            del.onclick=function(){
+                var removed=pendingTodos.splice(idx,1)[0];
+                if(removed&&removed.id) api('/todos/'+removed.id,{method:'DELETE'});
+                buildTodoList(pendingTodos);
+            };
+            item.appendChild(chk);item.appendChild(textEl);item.appendChild(del);
+            list.appendChild(item);
+        })(i);
+    }
+    document.getElementById('todoInput').focus();
+}
+
+function addTodoItem(){
+    var input=document.getElementById('todoInput');
+    var text=input.value.trim(); if(!text) return;
+    input.value='';
+    pendingTodos.push({id:null,text:text,checked:0});
+    buildTodoList(pendingTodos);
+}
+
+function openCardModal(colId,cardId){
+    editCardColId=colId;editCardId=cardId;selectedCardColor='#ffffff';
+    document.getElementById('cardModalTitle').textContent=cardId?'Editar tarefa':'Nova tarefa';
+    buildPalette('cardModalColors',selectedCardColor,function(c){selectedCardColor=c;});
+    document.getElementById('todoInput').value='';
+    buildTodoList([]);
+
+    if(cardId){
+        api('/columns/'+colId+'/cards').then(function(cards){
+            if(!cards) return;
+            for(var i=0;i<cards.length;i++) if(cards[i].id===cardId){
+                document.getElementById('cardModalTitleInput').value=cards[i].title;
+                document.getElementById('cardModalDesc').value=cards[i].description||'';
+                selectedCardColor=cards[i].color||'#ffffff';
+                buildPalette('cardModalColors',selectedCardColor,function(c){selectedCardColor=c;});
+                break;
+            }
+        });
+        api('/cards/'+cardId+'/todos').then(function(todos){
+            if(todos) buildTodoList(todos);
+        });
+    } else {
+        document.getElementById('cardModalTitleInput').value='';
+        document.getElementById('cardModalDesc').value='';
+    }
+    document.getElementById('cardModal').classList.add('show');
+    setTimeout(function(){document.getElementById('cardModalTitleInput').focus();},100);
+}
+
+function closeCardModal(){
+    document.getElementById('cardModal').classList.remove('show');
+    editCardColId=null;editCardId=null;pendingTodos=[];
+}
+
+function saveCard(){
+    var title=document.getElementById('cardModalTitleInput').value.trim(); if(!title) return;
+    var data={column_id:editCardColId,title:title,description:document.getElementById('cardModalDesc').value.trim(),color:selectedCardColor};
+    var url,method; if(editCardId){url='/cards/'+editCardId;method='PUT';}else{url='/cards';method='POST';}
+    api(url,{method:method,body:JSON.stringify(data)}).then(function(card){
+        if(!card) return;
+        var cid=card.id||editCardId;
+        var promises=[];
+        for(var i=0;i<pendingTodos.length;i++){
+            var t=pendingTodos[i];
+            if(t.id){
+                promises.push(api('/todos/'+t.id,{method:'PUT',body:JSON.stringify({text:t.text,checked:t.checked})}));
+            } else {
+                promises.push(api('/todos',{method:'POST',body:JSON.stringify({card_id:cid,text:t.text})}));
+            }
+        }
+        Promise.all(promises).then(function(){closeCardModal();refresh();});
+    });
+}
+
+// --- CARD PROGRESS ---
+function renderCard(c, container){
+    var d = document.createElement('div'); d.className='card'; d.draggable=true; d.setAttribute('data-card',c.id);
+    d.style.backgroundColor=c.color||'#ffffff';
+    d.addEventListener('dragstart',function(e){
+        e.dataTransfer.effectAllowed='move';
+        e.dataTransfer.setData('text/plain',String(c.id));
+        dragData={id:c.id,colId:c.column_id,title:c.title,desc:c.description,color:c.color,el:d,container:container};
+        d.style.opacity='0.2';
+    });
+    d.addEventListener('dragend',function(){
+        document.querySelectorAll('.card-preview').forEach(function(e){e.remove();});
+        document.querySelectorAll('.dragging-col').forEach(function(e){e.classList.remove('dragging-col');});
+        if(dragData&&dragData.el) dragData.el.style.opacity='1';
+        dragData=null;
+    });
+    var t=document.createElement('div'); t.className='card-title'; t.textContent=c.title; d.appendChild(t);
+    if(c.description){var de=document.createElement('div');de.className='card-desc';de.textContent=c.description;d.appendChild(de);}
+
+    // Todo items on the card
+    var todosContainer=document.createElement('div');
+    todosContainer.style.cssText='margin-top:6px;';
+    d.appendChild(todosContainer);
+    api('/cards/'+c.id+'/todos').then(function(todos){
+        if(!todos||todos.length===0) return;
+        todosContainer.innerHTML='';
+        for(var i=0;i<todos.length;i++){
+            (function(todo){
+                var div=document.createElement('div');
+                div.style.cssText='display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12px;cursor:default;';
+                if(todo.checked){
+                    div.style.color='#999';
+                    div.style.textDecoration='line-through';
+                    div.textContent='\u2713 '+todo.text;
+                } else {
+                    var box=document.createElement('span');
+                    box.style.cssText='width:14px;height:14px;border:2px solid #888;border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:10px;color:#fff;transition:all 0.15s;';
+                    box.onclick=function(e){
+                        e.stopPropagation();
+                        api('/todos/'+todo.id,{method:'PUT',body:JSON.stringify({checked:1})}).then(function(){
+                            refresh();loadTrash();
+                        });
+                    };
+                    box.onmouseover=function(){this.style.borderColor='#0079bf';this.style.background='#e3f2fd';};
+                    box.onmouseout=function(){this.style.borderColor='#888';this.style.background='';};
+                    div.appendChild(box);
+                    var txt=document.createElement('span');
+                    txt.style.cssText='flex:1;color:#1d1d1f;';
+                    txt.textContent=todo.text;
+                    div.appendChild(txt);
+                }
+                todosContainer.appendChild(div);
+            })(todos[i]);
+        }
+    });
+
+    var act=document.createElement('div');act.className='card-act';
+    var eb=document.createElement('button');eb.textContent='\u270E';eb.title='Editar';
+    eb.onclick=function(e){e.stopPropagation();openCardModal(c.column_id,c.id);};
+    act.appendChild(eb);d.appendChild(act);container.appendChild(d);
+}
+function openColModal(c){
+    editColId=c.id;selectedColColor=c.background_color||'#dfe1e6';
+    document.getElementById('colModalAccent').value=c.accent_color||'#90a4ae';
+    buildPalette('colModalColors',selectedColColor,function(c){selectedColColor=c;});
+    var wWrap=document.getElementById('colWidthInput');
+    if(widthMode==='proportional'){
+        wWrap.style.display='block';
+        document.getElementById('colWidthPct').value=parseInt(c.width,10)||Math.round(100/columns.length);
+        document.getElementById('colWidthPctVal').textContent=document.getElementById('colWidthPct').value+'%';
+    } else wWrap.style.display='none';
+    document.getElementById('colModal').classList.add('show');
+}
+function okColSettings(){
+    if(!editColId) return;
+    var data={background_color:selectedColColor,accent_color:document.getElementById('colModalAccent').value};
+    if(widthMode==='proportional') data.width=parseInt(document.getElementById('colWidthPct').value,10);
+    api('/columns/'+editColId,{method:'PUT',body:JSON.stringify(data)}).then(function(){refresh();});
+    document.getElementById('colModal').classList.remove('show');
+    editColId=null;
+}
+
+// --- GLOBAL SETTINGS ---
+function openGlobalModal(){
+    document.getElementById('globalName').value=globalSettings.name||'Mural Kanban';
+    document.getElementById('globalBg').value=globalSettings.bg||'#0079bf';
+    document.getElementById('globalRadius').value=parseInt(globalSettings.radius,10)||12;
+    document.getElementById('globalRadiusVal').textContent=document.getElementById('globalRadius').value+'px';
+    var radios=document.getElementsByName('widthMode');
+    for(var i=0;i<radios.length;i++) radios[i].checked=(radios[i].value===widthMode);
+    toggleWidthOptions();
+    buildPalettePicker();
+    buildColManager();
+    document.getElementById('globalModal').classList.add('show');
+}
+function toggleWidthOptions(){
+    var radios=document.getElementsByName('widthMode');
+    var mode='fit';
+    for(var i=0;i<radios.length;i++) if(radios[i].checked){mode=radios[i].value;break;}
+    document.getElementById('absoluteWidthWrap').className='width-input-wrap'+(mode==='absolute'?' show':'');
+    document.getElementById('absoluteWidth').value=absWidth;
+}
+function buildPalettePicker(){
+    var cont=document.getElementById('palettePicker'); cont.innerHTML='';
+    for(var i=0;i<palette.length;i++){
+        var div=document.createElement('div');div.style.cssText='display:flex;flex-direction:column;align-items:center;';
+        var input=document.createElement('input');input.type='color';input.value=palette[i];
+        input.onchange=(function(idx){return function(){palette[idx]=this.value;};})(i);
+        div.appendChild(input);cont.appendChild(div);
+    }
+}
+function buildColManager(){
+    var list=document.getElementById('colManagerList'); list.innerHTML='';
+    var sorted=columns.slice().sort(function(a,b){return a.order_index-b.order_index;});
+    if(sorted.length===0){
+        list.innerHTML='<p style="color:#999;font-size:13px;text-align:center;padding:10px;">Nenhuma coluna</p>';
+        return;
+    }
+    for(var i=0;i<sorted.length;i++){
+        (function(col){
+            var item=document.createElement('div');
+            item.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;margin-bottom:4px;';
+            item.style.background=col.background_color||'#dfe1e6';
+            var name=document.createElement('span');
+            name.style.cssText='flex:1;font-size:13px;font-weight:600;color:#1d1d1f;';
+            name.textContent=col.title;
+            var cnt=document.createElement('span');
+            cnt.style.cssText='font-size:11px;color:#555;background:rgba(0,0,0,0.08);padding:2px 6px;border-radius:4px;margin-right:4px;';
+            cnt.textContent='...';
+            var delBtn=document.createElement('button');
+            delBtn.textContent='\u2715';
+            delBtn.title='Excluir coluna';
+            delBtn.style.cssText='background:transparent;border:none;font-size:16px;cursor:pointer;color:#555;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;';
+            delBtn.onmouseover=function(){this.style.background='#ffebee';this.style.color='#d32f2f';};
+            delBtn.onmouseout=function(){this.style.background='';this.style.color='#555';};
+            delBtn.onclick=function(e){
+                e.stopPropagation();
+                if(!confirm('Excluir a coluna "'+col.title+'"?\n\nTodas as tarefas irão para a lixeira.')) return;
+                if(!confirm('Confirmação final: excluir "'+col.title+'"?')) return;
+                api('/columns/'+col.id,{method:'DELETE'}).then(function(){
+                    api('/columns').then(function(data){
+                        if(data) columns=data;
+                        renderBoard();
+                        buildColManager();
+                        loadTrash();
+                    });
+                });
+            };
+            item.appendChild(name);
+            item.appendChild(cnt);
+            item.appendChild(delBtn);
+            list.appendChild(item);
+            api('/columns/'+col.id+'/cards').then(function(cards){if(cards)cnt.textContent=cards.length;});
+        })(sorted[i]);
+    }
+}
+function confirmDeleteCols(){
+    var checkboxes=document.getElementById('colManagerList').querySelectorAll('input[type="checkbox"]:checked');
+    if(checkboxes.length===0) return;
+    var ids=[];
+    var names=[];
+    for(var i=0;i<checkboxes.length;i++){
+        ids.push(parseInt(checkboxes[i].value,10));
+        names.push(checkboxes[i].getAttribute('data-name'));
+    }
+    if(!confirm('Excluir '+ids.length+' coluna(s)?\n\n'+names.join(', ')+'\n\nTodas as tarefas serão deletadas permanentemente.')) return;
+    if(!confirm('Confirmação final: excluir '+ids.length+' coluna(s)?')) return;
+    var promises=[];
+    for(var i=0;i<ids.length;i++){
+        promises.push(api('/columns/'+ids[i],{method:'DELETE'}));
+    }
+    Promise.all(promises).then(function(){
+        window._pendingDel=[];
+        document.getElementById('delColsBtn').style.display='none';
+        api('/columns').then(function(data){
+            if(data) columns=data;
+            renderBoard();
+            buildColManager();
+            loadTrash();
+        });
+    });
+}
+function okGlobal(){
+    // Read all values
+    globalSettings.name=document.getElementById('globalName').value.trim()||'Mural Kanban';
+    globalSettings.bg=document.getElementById('globalBg').value;
+    globalSettings.radius=parseInt(document.getElementById('globalRadius').value,10);
+    var radios=document.getElementsByName('widthMode');
+    var mode='fit';
+    for(var i=0;i<radios.length;i++) if(radios[i].checked){mode=radios[i].value;break;}
+    widthMode=mode;
+    if(mode==='absolute') absWidth=parseInt(document.getElementById('absoluteWidth').value,10)||280;
+    globalSettings.widthMode=widthMode;
+    globalSettings.absWidth=absWidth;
+    globalSettings.palette=palette.slice();
+    saveGlobalState();
+    document.getElementById('globalModal').classList.remove('show');
+    refresh();
+}
+
+// --- TRASH MODAL ---
+function openTrashModal(){
+    api('/cards/trash').then(function(cards){
+        var list=document.getElementById('trashList'); list.innerHTML='';
+        if(!cards||cards.length===0) list.innerHTML='<p style="color:#999;font-size:14px;text-align:center;padding:20px;">Lixeira vazia</p>';
+        else{
+            for(var i=0;i<cards.length;i++){
+                var item=document.createElement('div');
+                item.style.cssText='display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:#f5f5f5;margin-bottom:6px;';
+                var dot=document.createElement('span');
+                dot.style.cssText='width:12px;height:12px;border-radius:50%;flex-shrink:0;';
+                dot.style.backgroundColor=cards[i].color||'#fff';
+                var t=document.createElement('span');t.style.cssText='flex:1;font-size:14px;';t.textContent=cards[i].title;
+                var rb=document.createElement('button');rb.textContent='Restaurar';
+                rb.style.cssText='padding:6px 14px;border:none;border-radius:6px;background:#0079bf;color:#fff;font-size:13px;cursor:pointer;font-weight:600;';
+                rb.onclick=(function(cid){return function(){api('/cards/'+cid+'/restore',{method:'PUT'}).then(function(){openTrashModal();loadTrash();refresh();});};})(cards[i].id);
+                item.appendChild(dot);item.appendChild(t);item.appendChild(rb);list.appendChild(item);
+            }
+        }
+    });document.getElementById('trashModal').classList.add('show');
+}
+function closeTrashModal(){document.getElementById('trashModal').classList.remove('show');}
+
+// --- EDIT TITLE ---
+function editTitle(){
+    var current=document.getElementById('muralTitle').textContent;
+    var name=prompt('Nome do mural:',current);
+    if(name&&name.trim()){globalSettings.name=name.trim();saveGlobalState();}
+}
+
+// --- INIT ---
+applySettings();refresh();
+
+// ---- EVENTOS ----
+document.getElementById('cardModal').onclick=function(e){if(e.target===this) closeCardModal();};
+document.getElementById('colModal').onclick=function(e){if(e.target===this) okColSettings();};
+document.getElementById('globalModal').onclick=function(e){if(e.target===this) okGlobal();};
+document.getElementById('trashModal').onclick=function(e){if(e.target===this) closeTrashModal();};
+document.getElementById('globalRadius').oninput=function(){
+    document.getElementById('globalRadiusVal').textContent=this.value+'px';
+    document.documentElement.style.setProperty('--radius',this.value+'px');
+};
+document.getElementById('colWidthPct').oninput=function(){document.getElementById('colWidthPctVal').textContent=this.value+'%';};
+// Width mode radio toggle
+var radios=document.getElementsByName('widthMode');
+for(var i=0;i<radios.length;i++) radios[i].onchange=function(){toggleWidthOptions();};
+
+document.onkeydown=function(e){
+    if(e.key==='Escape'){
+        if(document.getElementById('trashModal').classList.contains('show'))closeTrashModal();
+        else if(document.getElementById('globalModal').classList.contains('show'))okGlobal();
+        else if(document.getElementById('colModal').classList.contains('show'))okColSettings();
+        else if(document.getElementById('cardModal').classList.contains('show'))closeCardModal();
+    }
+};
+document.body.addEventListener('dragover',function(e){e.preventDefault();});
+document.body.addEventListener('drop',function(e){
+    e.preventDefault();
+    document.querySelectorAll('.dragging-col').forEach(function(el){el.classList.remove('dragging-col');});
+    document.querySelectorAll('.card-preview').forEach(function(el){el.remove();});
+    if(dragData&&dragData.el)dragData.el.style.opacity='1';
+    dragData=null;
+});
+</script>
+</body>
+</html>
