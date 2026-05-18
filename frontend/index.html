@@ -90,7 +90,7 @@ body { font-family: system-ui, sans-serif; background: var(--bg); min-height: 10
 <div class="modal-overlay" id="cardModal">
     <div class="modal-box">
         <h3 id="cardModalTitle">Nova tarefa</h3>
-        <label>Título</label><input type="text" id="cardModalTitleInput" placeholder="O que precisa ser feito?">
+        <label id="titleLabel">T&iacute;tulo</label><input type="text" id="cardModalTitleInput" placeholder="Titulo da tarefa" style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;margin:4px 0;">
         <label>Descrição</label><textarea id="cardModalDesc" placeholder="Detalhes adicionais"></textarea>
         <label>Lista de tarefas</label>
         <div style="display:flex;gap:8px;margin-bottom:8px;">
@@ -98,6 +98,17 @@ body { font-family: system-ui, sans-serif; background: var(--bg); min-height: 10
             <button class="btn-cancel" onclick="addTodoItem()" style="white-space:nowrap;flex-shrink:0;display:flex;align-items:center;">Adicionar</button>
         </div>
         <div id="todoList" style="max-height:180px;overflow-y:auto;margin-bottom:8px;"></div>
+        <label style="font-weight:400;font-size:13px;margin-top:8px;display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="deadlineChk" onchange="toggleDeadlineInput()" style="width:16px;height:16px;cursor:pointer;">
+            Deadline
+        </label>
+        <div id="deadlineInputWrap" style="display:none;margin-top:4px;">
+            <input type="date" id="deadlineInput" style="width:100%;padding:8px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;">
+        </div>
+        <label style="font-weight:400;font-size:13px;display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px;">
+            <input type="checkbox" id="modalDoneChk" style="width:16px;height:16px;cursor:pointer;">
+            Conclu&iacute;do?
+        </label>
         <label>Cor</label><div class="colors" id="cardModalColors"></div>
         <div class="modal-btns"><button class="btn-ok" onclick="saveCard()">OK</button></div>
     </div>
@@ -135,15 +146,29 @@ body { font-family: system-ui, sans-serif; background: var(--bg); min-height: 10
             <span class="range-val" id="globalRadiusVal">12px</span>
         </div>
 
-        <label>Largura das colunas</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <label style="margin-top:0;">Largura das colunas</label>
+        </div>
         <div class="radio-group">
-            <label><input type="radio" name="widthMode" value="fit"> Encaixar (divide a tela igualmente)</label>
-            <label><input type="radio" name="widthMode" value="absolute"> Fixa em pixels</label>
+            <label style="display:flex;align-items:center;gap:4px;"><input type="radio" name="widthMode" value="fit"> Proporcional</label>
+            <div style="display:flex;align-items:center;gap:6px;margin-left:24px;margin-top:-4px;margin-bottom:4px;">
+                <span style="font-size:11px;color:#999;">Divide a tela igualmente entre as colunas</span>
+                <button onclick="resetWidthTo('fit')" style="background:none;border:none;font-size:11px;color:#999;cursor:pointer;text-decoration:underline;padding:0;">padrao</button>
+            </div>
+            <label style="display:flex;align-items:center;gap:4px;"><input type="radio" name="widthMode" value="absolute"> Absoluta</label>
+            <div style="display:flex;align-items:center;gap:6px;margin-left:24px;margin-top:-4px;margin-bottom:4px;">
+                <span style="font-size:11px;color:#999;">Todas as colunas com largura fixa em pixels</span>
+                <button onclick="resetWidthTo('absolute')" style="background:none;border:none;font-size:11px;color:#999;cursor:pointer;text-decoration:underline;padding:0;">280px</button>
+            </div>
             <div class="width-input-wrap" id="absoluteWidthWrap">
                 <input type="number" id="absoluteWidth" value="280" min="100" max="2000">
                 <span>px</span>
             </div>
-            <label><input type="radio" name="widthMode" value="proportional"> Proporcional (configurar em cada coluna)</label>
+            <label style="display:flex;align-items:center;gap:4px;"><input type="radio" name="widthMode" value="proportional"> Individual</label>
+            <div style="display:flex;align-items:center;gap:6px;margin-left:24px;margin-top:-4px;margin-bottom:4px;">
+                <span style="font-size:11px;color:#999;">Cada coluna com largura em porcentagem (configurar em cada coluna)</span>
+                <button onclick="resetWidthTo('proportional')" style="background:none;border:none;font-size:11px;color:#999;cursor:pointer;text-decoration:underline;padding:0;">igual</button>
+            </div>
         </div>
 
         <hr style="margin:20px 0;border:none;border-top:1px solid #e0e0e0;">
@@ -157,6 +182,23 @@ body { font-family: system-ui, sans-serif; background: var(--bg); min-height: 10
         <label style="margin-top:0;">Gerenciar colunas</label>
         <p style="font-size:12px;color:#999;margin-bottom:10px;">Clique no ✕ para excluir a coluna</p>
         <div id="colManagerList" style="max-height:220px;overflow-y:auto;margin-bottom:12px;"></div>
+
+        <hr style="margin:20px 0;border:none;border-top:1px solid #e0e0e0;">
+
+        <label style="margin-top:0;">Op&ccedil;&otilde;es dos cards</label>
+        <label style="font-weight:400;font-size:13px;margin-top:8px;display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="showTitleChk" onchange="toggleTitleOpts()" style="width:18px;height:18px;cursor:pointer;">
+            Exibir t&iacute;tulo no card
+        </label>
+        <label style="font-weight:400;font-size:13px;margin-top:4px;display:flex;align-items:center;gap:8px;cursor:pointer;padding-left:26px;" id="requireTitleWrap">
+            <input type="checkbox" id="requireTitleChk" style="width:18px;height:18px;cursor:pointer;">
+            Exigir t&iacute;tulo (se desligado, pode ficar em branco)
+        </label>
+        <label style="font-weight:400;font-size:13px;margin-top:8px;display:flex;align-items:center;gap:8px;cursor:pointer;">
+            Alerta de deadline: quantos dias antes come&ccedil;a a reduzir a barra
+        </label>
+        <input type="number" id="deadlineAlertDays" value="7" min="1" max="90" style="width:80px;padding:6px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;margin-top:4px;">
+        <span style="font-size:13px;color:#777;margin-left:8px;">dias</span>
 
         <hr style="margin:20px 0;border:none;border-top:1px solid #e0e0e0;">
 
@@ -221,13 +263,14 @@ function saveGlobalState(){
 
 // --- COLUMN WIDTH ---
 function colWidth(col){
-    if(widthMode === 'fit') return {flex:'1', min:'200px'};
-    else if(widthMode === 'absolute') return {flex:'none', min:absWidth+'px', max:absWidth+'px'};
+    if(widthMode === 'fit') return {flex:'1', min:'15%'};
+    else if(widthMode === 'absolute') return {flex:'none', min:'250px', max:absWidth+'px'};
     else if(widthMode === 'proportional'){
-        var pct = parseInt(col.width, 10) || Math.round(100/(columns.length||1));
-        return {flex:'none', min:'100px', width:pct+'%', max:pct+'%'};
+        var pct = parseInt(col.width, 10) || 30;
+        if(pct < 15) pct = 15;
+        return {flex:'none', min:'15%', width:pct+'%', max:pct+'%'};
     }
-    return {flex:'1', min:'200px'};
+    return {flex:'1', min:'15%'};
 }
 
 // --- TRASH ---
@@ -339,29 +382,6 @@ function renderCol(c){
     });
 }
 
-function renderCard(c, container){
-    var d = document.createElement('div'); d.className='card'; d.draggable=true; d.setAttribute('data-card',c.id);
-    d.style.backgroundColor=c.color||'#ffffff';
-    d.addEventListener('dragstart',function(e){
-        e.dataTransfer.effectAllowed='move';
-        e.dataTransfer.setData('text/plain',String(c.id));
-        dragData={id:c.id,colId:c.column_id,title:c.title,desc:c.description,color:c.color,el:d,container:container};
-        d.style.opacity='0.2';
-    });
-    d.addEventListener('dragend',function(){
-        document.querySelectorAll('.card-preview').forEach(function(e){e.remove();});
-        document.querySelectorAll('.dragging-col').forEach(function(e){e.classList.remove('dragging-col');});
-        if(dragData&&dragData.el) dragData.el.style.opacity='1';
-        dragData=null;
-    });
-    var t=document.createElement('div'); t.className='card-title'; t.textContent=c.title; d.appendChild(t);
-    if(c.description){var de=document.createElement('div');de.className='card-desc';de.textContent=c.description;d.appendChild(de);}
-    var act=document.createElement('div');act.className='card-act';
-    var eb=document.createElement('button');eb.textContent='\u270E';eb.title='Editar';
-    eb.onclick=function(e){e.stopPropagation();openCardModal(c.column_id,c.id);};
-    act.appendChild(eb);d.appendChild(act);container.appendChild(d);
-}
-
 function refresh(){
     api('/columns').then(function(data){
         if(data){columns=data;renderBoard();}loadTrash();
@@ -373,7 +393,7 @@ function addColFromSettings(){
     var input=document.getElementById('addColName');
     var name=input.value.trim(); if(!name) return;
     input.value='';
-    var w = (widthMode==='proportional') ? Math.round(100/(columns.length+1)) : 280;
+    var w = (widthMode==='proportional') ? 30 : 280;
     api('/columns',{method:'POST',body:JSON.stringify({title:name,width:w,
         background_color:palette[Math.floor(Math.random()*palette.length)],
         accent_color:palette[Math.floor(Math.random()*palette.length)]
@@ -446,9 +466,24 @@ function addTodoItem(){
 function openCardModal(colId,cardId){
     editCardColId=colId;editCardId=cardId;selectedCardColor='#ffffff';
     document.getElementById('cardModalTitle').textContent=cardId?'Editar tarefa':'Nova tarefa';
+    var showTitle=globalSettings.showTitle!==false;
+    var requireTitle=globalSettings.requireTitle===true && showTitle;
+    var titleEl=document.getElementById('cardModalTitleInput');
+    var titleLabel=document.getElementById('titleLabel');
+    if(showTitle){
+        titleEl.style.display='';
+        titleLabel.style.display='';
+    } else {
+        titleEl.style.display='none';
+        titleLabel.style.display='none';
+    }
     buildPalette('cardModalColors',selectedCardColor,function(c){selectedCardColor=c;});
     document.getElementById('todoInput').value='';
     buildTodoList([]);
+    document.getElementById('deadlineChk').checked=false;
+    document.getElementById('deadlineInputWrap').style.display='none';
+    document.getElementById('deadlineInput').value='';
+    document.getElementById('modalDoneChk').checked=false;
 
     if(cardId){
         api('/columns/'+colId+'/cards').then(function(cards){
@@ -458,6 +493,12 @@ function openCardModal(colId,cardId){
                 document.getElementById('cardModalDesc').value=cards[i].description||'';
                 selectedCardColor=cards[i].color||'#ffffff';
                 buildPalette('cardModalColors',selectedCardColor,function(c){selectedCardColor=c;});
+                if(cards[i].deadline){
+                    document.getElementById('deadlineChk').checked=true;
+                    document.getElementById('deadlineInputWrap').style.display='block';
+                    document.getElementById('deadlineInput').value=cards[i].deadline;
+                }
+                document.getElementById('modalDoneChk').checked=!!cards[i].done;
                 break;
             }
         });
@@ -478,11 +519,20 @@ function closeCardModal(){
 }
 
 function saveCard(){
-    var title=document.getElementById('cardModalTitleInput').value.trim(); if(!title) return;
-    var data={column_id:editCardColId,title:title,description:document.getElementById('cardModalDesc').value.trim(),color:selectedCardColor};
+    if(!editCardColId){console.error('No column selected');return;}
+    var showTitle=globalSettings.showTitle!==false;
+    var requireTitle=globalSettings.requireTitle===true && showTitle;
+    var title=document.getElementById('cardModalTitleInput').value.trim();
+    if(requireTitle && !title){alert('Digite um titulo para a tarefa');return;}
+    if(!showTitle) title='';
+    var deadline=null;
+    if(document.getElementById('deadlineChk').checked){
+        deadline=document.getElementById('deadlineInput').value.trim()||null;
+    }
+    var data={column_id:editCardColId,title:title,description:document.getElementById('cardModalDesc').value.trim(),color:selectedCardColor,deadline:deadline,done:document.getElementById('modalDoneChk').checked?1:0};
     var url,method; if(editCardId){url='/cards/'+editCardId;method='PUT';}else{url='/cards';method='POST';}
     api(url,{method:method,body:JSON.stringify(data)}).then(function(card){
-        if(!card) return;
+        if(!card){alert('Erro ao salvar o card');return;}
         var cid=card.id||editCardId;
         var promises=[];
         for(var i=0;i<pendingTodos.length;i++){
@@ -494,13 +544,18 @@ function saveCard(){
             }
         }
         Promise.all(promises).then(function(){closeCardModal();refresh();});
-    });
+    }).catch(function(e){alert('Erro: '+e);});
 }
 
 // --- CARD PROGRESS ---
 function renderCard(c, container){
     var d = document.createElement('div'); d.className='card'; d.draggable=true; d.setAttribute('data-card',c.id);
     d.style.backgroundColor=c.color||'#ffffff';
+    var cardDone=c.done?1:0;
+    if(cardDone){
+        d.style.opacity='0.55';
+        d.style.filter='grayscale(0.6)';
+    }
     d.addEventListener('dragstart',function(e){
         e.dataTransfer.effectAllowed='move';
         e.dataTransfer.setData('text/plain',String(c.id));
@@ -513,7 +568,16 @@ function renderCard(c, container){
         if(dragData&&dragData.el) dragData.el.style.opacity='1';
         dragData=null;
     });
-    var t=document.createElement('div'); t.className='card-title'; t.textContent=c.title; d.appendChild(t);
+    if(c.title){
+        var t=document.createElement('div'); t.className='card-title';
+        t.style.cssText='flex:1;font-size:14px;color:#1d1d1f;word-break:break-word;';
+        if(cardDone){
+            t.style.textDecoration='line-through';
+            t.style.color='#999';
+        }
+        t.textContent=c.title;
+        d.appendChild(t);
+    }
     if(c.description){var de=document.createElement('div');de.className='card-desc';de.textContent=c.description;d.appendChild(de);}
 
     // Todo items on the card
@@ -553,6 +617,90 @@ function renderCard(c, container){
         }
     });
 
+    // Deadline bar
+    if(c.deadline){
+        var deadlineDate=new Date(c.deadline+'T23:59:59');
+        var now=new Date();
+        var diffMs=deadlineDate-now;
+        var diffDays=Math.ceil(diffMs/(1000*60*60*24));
+        var alertDays=parseInt(globalSettings.deadlineAlertDays,10)||7;
+
+        var row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:6px;margin-top:8px;';
+
+        var doneChk=document.createElement('input');
+        doneChk.type='checkbox';
+        doneChk.checked=!!cardDone;
+        doneChk.style.cssText='width:14px;height:14px;cursor:pointer;flex-shrink:0;';
+        doneChk.onclick=function(e){
+            e.stopPropagation();
+            if(cardDone){this.checked=true;return;}
+            api('/cards/'+c.id,{method:'PUT',body:JSON.stringify({done:1})}).then(function(){refresh();});
+        };
+
+        var barCol=document.createElement('div');
+        barCol.style.cssText='flex:1;display:flex;flex-direction:column;gap:2px;';
+
+        var barWrap=document.createElement('div');
+        barWrap.style.cssText='background:#e0e0e0;border-radius:3px;height:6px;overflow:hidden;';
+        barWrap.title='Data: '+c.deadline;
+
+        var bar=document.createElement('div');
+        bar.style.cssText='height:100%;border-radius:3px;transition:width 0.3s;';
+
+        var pct=100;
+        if(diffDays<=0){
+            pct=0;
+        } else if(diffDays<alertDays){
+            pct=Math.round((diffDays/alertDays)*100);
+            if(pct<0)pct=0;if(pct>100)pct=100;
+        }
+
+        if(cardDone){
+            bar.style.width='100%';
+            bar.style.backgroundColor='#4caf50';
+        } else {
+            // Color: green (full) → yellow (half) → red (expired)
+            var t=Math.min(Math.max(pct/100,0),1);
+            var r,g,b;
+            if(t>=0.5){
+                var s=(t-0.5)*2;
+                r=Math.round(76+(255-76)*s);
+                g=Math.round(175+(235-175)*s);
+                b=Math.round(80+(67-80)*s);
+            } else {
+                var s=t*2;
+                r=Math.round(255+(229-255)*s);
+                g=Math.round(235+(57-235)*s);
+                b=Math.round(67+(53-67)*s);
+            }
+            bar.style.width=pct+'%';
+            bar.style.backgroundColor='rgb('+r+','+g+','+b+')';
+        }
+
+        barWrap.appendChild(bar);
+
+        var labelWrap=document.createElement('div');
+        labelWrap.style.cssText='display:flex;justify-content:space-between;align-items:center;';
+        var dateLabel=document.createElement('span');
+        dateLabel.style.cssText='font-size:10px;color:#aaa;cursor:default;';
+        dateLabel.textContent=c.deadline;
+        var label=document.createElement('span');
+        label.style.cssText='font-size:11px;color:#888;';
+        if(cardDone) label.textContent='Concluido';
+        else if(diffDays<=0) {label.textContent='Vencido';d.style.border='2px solid #e53935';}
+        else if(diffDays===1) label.textContent='1 dia';
+        else label.textContent=diffDays+' dias';
+
+        barCol.appendChild(barWrap);
+        barCol.appendChild(labelWrap);
+        labelWrap.appendChild(dateLabel);
+        labelWrap.appendChild(label);
+        row.appendChild(doneChk);
+        row.appendChild(barCol);
+        d.appendChild(row);
+    }
+
     var act=document.createElement('div');act.className='card-act';
     var eb=document.createElement('button');eb.textContent='\u270E';eb.title='Editar';
     eb.onclick=function(e){e.stopPropagation();openCardModal(c.column_id,c.id);};
@@ -585,12 +733,36 @@ function openGlobalModal(){
     document.getElementById('globalBg').value=globalSettings.bg||'#0079bf';
     document.getElementById('globalRadius').value=parseInt(globalSettings.radius,10)||12;
     document.getElementById('globalRadiusVal').textContent=document.getElementById('globalRadius').value+'px';
+    document.getElementById('showTitleChk').checked=globalSettings.showTitle!==false;
+    document.getElementById('requireTitleChk').checked=globalSettings.requireTitle===true;
+    document.getElementById('deadlineAlertDays').value=globalSettings.deadlineAlertDays||7;
+    toggleTitleOpts();
     var radios=document.getElementsByName('widthMode');
     for(var i=0;i<radios.length;i++) radios[i].checked=(radios[i].value===widthMode);
     toggleWidthOptions();
     buildPalettePicker();
     buildColManager();
     document.getElementById('globalModal').classList.add('show');
+}
+function resetWidthTo(mode){
+    if(mode==='fit'){
+        widthMode='fit';
+    } else if(mode==='absolute'){
+        widthMode='absolute';
+        absWidth=280;
+    } else if(mode==='proportional'){
+        widthMode='proportional';
+        // Reset all columns to 30%
+        for(var i=0;i<columns.length;i++){
+            (function(colId){
+                api('/columns/'+colId,{method:'PUT',body:JSON.stringify({width:30})});
+            })(columns[i].id);
+        }
+    }
+    var radios=document.getElementsByName('widthMode');
+    for(var i=0;i<radios.length;i++) radios[i].checked=(radios[i].value===widthMode);
+    toggleWidthOptions();
+    document.getElementById('absoluteWidth').value=absWidth;
 }
 function toggleWidthOptions(){
     var radios=document.getElementsByName('widthMode');
@@ -653,31 +825,13 @@ function buildColManager(){
         })(sorted[i]);
     }
 }
-function confirmDeleteCols(){
-    var checkboxes=document.getElementById('colManagerList').querySelectorAll('input[type="checkbox"]:checked');
-    if(checkboxes.length===0) return;
-    var ids=[];
-    var names=[];
-    for(var i=0;i<checkboxes.length;i++){
-        ids.push(parseInt(checkboxes[i].value,10));
-        names.push(checkboxes[i].getAttribute('data-name'));
-    }
-    if(!confirm('Excluir '+ids.length+' coluna(s)?\n\n'+names.join(', ')+'\n\nTodas as tarefas serão deletadas permanentemente.')) return;
-    if(!confirm('Confirmação final: excluir '+ids.length+' coluna(s)?')) return;
-    var promises=[];
-    for(var i=0;i<ids.length;i++){
-        promises.push(api('/columns/'+ids[i],{method:'DELETE'}));
-    }
-    Promise.all(promises).then(function(){
-        window._pendingDel=[];
-        document.getElementById('delColsBtn').style.display='none';
-        api('/columns').then(function(data){
-            if(data) columns=data;
-            renderBoard();
-            buildColManager();
-            loadTrash();
-        });
-    });
+function toggleDeadlineInput(){
+    var chk=document.getElementById('deadlineChk').checked;
+    document.getElementById('deadlineInputWrap').style.display=chk?'block':'none';
+}
+function toggleTitleOpts(){
+    var show=document.getElementById('showTitleChk').checked;
+    document.getElementById('requireTitleWrap').style.display=show?'flex':'none';
 }
 function okGlobal(){
     // Read all values
@@ -691,6 +845,9 @@ function okGlobal(){
     if(mode==='absolute') absWidth=parseInt(document.getElementById('absoluteWidth').value,10)||280;
     globalSettings.widthMode=widthMode;
     globalSettings.absWidth=absWidth;
+    globalSettings.showTitle=document.getElementById('showTitleChk').checked;
+    globalSettings.requireTitle=document.getElementById('requireTitleChk').checked;
+    globalSettings.deadlineAlertDays=parseInt(document.getElementById('deadlineAlertDays').value,10)||7;
     globalSettings.palette=palette.slice();
     saveGlobalState();
     document.getElementById('globalModal').classList.remove('show');
