@@ -3,11 +3,17 @@ from flask_cors import CORS
 import sqlite3
 import os
 
-app = Flask(__name__, static_folder='/app/frontend', static_url_path='')
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_DIR = os.environ.get('KANBAN_FRONTEND',
+    '/app/frontend' if os.path.isdir('/app/frontend')
+    else os.path.join(BASE_DIR, 'frontend'))
+
+app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
 CORS(app)
 
-DB_PATH = os.environ.get('KANBAN_DB', '/data/k.sqlite')
-FRONTEND_DIR = '/app/frontend'
+DB_PATH = os.environ.get('KANBAN_DB',
+    '/data/k.sqlite' if os.path.isdir('/data')
+    else os.path.join(BASE_DIR, 'data', 'k.sqlite'))
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -325,6 +331,32 @@ def reorder_cards():
                 'UPDATE cards SET column_id = ?, order_index = ? WHERE id = ?',
                 (item['column_id'], item['order_index'], item['id'])
             )
+        conn.commit()
+        return '', 204
+    finally:
+        conn.close()
+
+@app.route('/api/reset', methods=['POST'])
+def reset_all():
+    conn = get_db()
+    try:
+        conn.execute('DELETE FROM todos')
+        conn.execute('DELETE FROM cards')
+        conn.execute('DELETE FROM columns')
+        conn.execute("INSERT INTO columns (title, order_index, background_color, accent_color, width, height, radius) VALUES ('A Fazer', 0, '#ffecb3', '#ffa726', 280, '', 12)")
+        conn.execute("INSERT INTO columns (title, order_index, background_color, accent_color, width, height, radius) VALUES ('Em Andamento', 1, '#bbdefb', '#42a5f5', 280, '', 12)")
+        conn.execute("INSERT INTO columns (title, order_index, background_color, accent_color, width, height, radius) VALUES ('Concluído', 2, '#c8e6c9', '#66bb6a', 280, '', 12)")
+        conn.commit()
+        return jsonify({'ok': True}), 200
+    finally:
+        conn.close()
+
+@app.route('/api/cards/trash/clear', methods=['DELETE'])
+def clear_trash():
+    conn = get_db()
+    try:
+        conn.execute('DELETE FROM todos WHERE card_id IN (SELECT id FROM cards WHERE trashed = 1)')
+        conn.execute('DELETE FROM cards WHERE trashed = 1')
         conn.commit()
         return '', 204
     finally:

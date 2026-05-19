@@ -3,14 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mural Kanban</title>
+<title data-i18n="appTitle">Mural Kanban</title>
 <style>
 :root { --bg: #0079bf; --radius: 12px; }
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: system-ui, sans-serif; background: var(--bg); min-height: 100vh; padding: 20px; }
-.top { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 20px; }
-.top h1 { color: #fff; font-size: 28px; font-weight: 700; cursor: pointer; padding: 4px 12px; border-radius: 8px; transition: background 0.15s; user-select: none; }
+.top { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; }
+.top h1 { color: #fff; font-size: 28px; font-weight: 700; cursor: pointer; padding: 4px 12px; border-radius: 8px; transition: background 0.15s; user-select: none; flex:1; text-align:center; margin:0; }
 .top h1:hover { background: rgba(255,255,255,0.15); }
+.right-group { display:flex; align-items:center; gap:8px; }
+.lang-switcher { display:flex; gap:4px; }
+.lang-btn { background:rgba(255,255,255,0.2); border:none; color:#fff; font-size:12px; font-weight:700; width:32px; height:32px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0; padding:0; }
+.lang-btn:hover { background:rgba(255,255,255,0.4); }
+.lang-btn.active { background:rgba(255,255,255,0.5); box-shadow:0 0 0 2px rgba(255,255,255,0.3); }
 .settings-btn { background: rgba(255,255,255,0.25); border: none; color: #fff; font-size: 22px; width: 44px; height: 44px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
 .settings-btn:hover { background: rgba(255,255,255,0.4); }
 .board { display: flex; gap: 16px; overflow-x: auto; padding: 10px 0; min-height: calc(100vh - 140px); align-items: flex-start; }
@@ -78,143 +83,155 @@ body { font-family: system-ui, sans-serif; background: var(--bg); min-height: 10
 
 <div class="top">
     <h1 id="muralTitle" onclick="editTitle()">Mural Kanban</h1>
-    <button class="settings-btn" onclick="openGlobalModal()">&#9881;</button>
+    <div class="right-group">
+        <div class="lang-switcher">
+            <button class="lang-btn" data-lang="pt" onclick="setLang('pt')" title="Português">PT</button>
+            <button class="lang-btn" data-lang="en" onclick="setLang('en')" title="English">EN</button>
+        </div>
+        <button class="settings-btn" onclick="openGlobalModal()">&#9881;</button>
+    </div>
 </div>
 <div class="board" id="board"></div>
 
-<button class="trash-btn" id="trashBtn" onclick="openTrashModal()" title="Arraste um card para excluir" ondragover="event.preventDefault();event.dataTransfer.dropEffect='move';this.style.transform='scale(1.3)';this.style.background='#d32f2f';this.style.color='#fff';" ondragleave="this.style.transform='';this.style.background='';this.style.color='';" ondrop="event.preventDefault();event.stopPropagation();this.style.transform='';this.style.background='';this.style.color='';if(typeof dragData!=='undefined'&&dragData){var cid=dragData.id;dragData=null;fetch('/api/cards/'+cid,{method:'DELETE'}).then(function(){location.reload();});}">
+<button class="trash-btn" id="trashBtn" onclick="openTrashModal()" data-i18n-title="trashHint" title="Arraste um card para excluir" ondragover="event.preventDefault();event.dataTransfer.dropEffect='move';this.style.transform='scale(1.3)';this.style.background='#d32f2f';this.style.color='#fff';" ondragleave="this.style.transform='';this.style.background='';this.style.color='';" ondrop="event.preventDefault();event.stopPropagation();this.style.transform='';this.style.background='';this.style.color='';if(typeof dragData!=='undefined'&&dragData){var cid=dragData.id;dragData=null;fetch('/api/cards/'+cid,{method:'DELETE'}).then(function(){location.reload();});}">
     &#128465;
     <span class="trash-count" id="trashCount" style="display:none">0</span>
 </button>
 
 <div class="modal-overlay" id="cardModal">
     <div class="modal-box">
-        <h3 id="cardModalTitle">Nova tarefa</h3>
-        <label id="titleLabel">T&iacute;tulo</label><input type="text" id="cardModalTitleInput" placeholder="Titulo da tarefa" style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;margin:4px 0;">
-        <label>Descrição</label><textarea id="cardModalDesc" placeholder="Detalhes adicionais"></textarea>
-        <label>Lista de tarefas</label>
+        <h3 id="cardModalTitle" data-i18n="cardNewTitle">Nova tarefa</h3>
+        <label id="titleLabel" data-i18n="title">T&iacute;tulo</label><input type="text" id="cardModalTitleInput" data-i18n-placeholder="titlePlaceholder" placeholder="Titulo da tarefa" style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;margin:4px 0;">
+        <label data-i18n="description">Descrição</label><textarea id="cardModalDesc" data-i18n-placeholder="descPlaceholder" placeholder="Detalhes adicionais"></textarea>
+        <label data-i18n="todoList">Lista de tarefas</label>
         <div style="display:flex;gap:8px;margin-bottom:8px;">
-            <input type="text" id="todoInput" placeholder="Nova tarefa..." style="flex:1;margin:0;">
-            <button class="btn-cancel" onclick="addTodoItem()" style="white-space:nowrap;flex-shrink:0;display:flex;align-items:center;">Adicionar</button>
+            <input type="text" id="todoInput" data-i18n-placeholder="todoPlaceholder" placeholder="Nova tarefa..." style="flex:1;margin:0;">
+            <button class="btn-cancel" onclick="addTodoItem()" data-i18n="add" style="white-space:nowrap;flex-shrink:0;display:flex;align-items:center;">Adicionar</button>
         </div>
         <div id="todoList" style="max-height:180px;overflow-y:auto;margin-bottom:8px;"></div>
         <label style="font-weight:400;font-size:13px;margin-top:8px;display:flex;align-items:center;gap:8px;cursor:pointer;">
             <input type="checkbox" id="deadlineChk" onchange="toggleDeadlineInput()" style="width:16px;height:16px;cursor:pointer;">
-            Deadline
+            <span data-i18n="deadline">Deadline</span>
         </label>
         <div id="deadlineInputWrap" style="display:none;margin-top:4px;">
             <input type="date" id="deadlineInput" style="width:100%;padding:8px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;">
         </div>
         <label style="font-weight:400;font-size:13px;display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px;">
             <input type="checkbox" id="modalDoneChk" style="width:16px;height:16px;cursor:pointer;">
-            Conclu&iacute;do?
+            <span data-i18n="done">Conclu&iacute;do?</span>
         </label>
-        <label>Cor</label><div class="colors" id="cardModalColors"></div>
-        <div class="modal-btns"><button class="btn-ok" onclick="saveCard()">OK</button></div>
+        <label data-i18n="color">Cor</label><div class="colors" id="cardModalColors"></div>
+        <div class="modal-btns"><button class="btn-ok" onclick="saveCard()"><span data-i18n="ok">OK</span></button></div>
     </div>
 </div>
 
 <div class="modal-overlay" id="colModal">
     <div class="modal-box">
-        <h3>Configurações da coluna</h3>
-        <label>Cor de fundo</label><div class="colors" id="colModalColors"></div>
-        <label>Cor de destaque (lateral)</label><input type="color" id="colModalAccent">
+        <h3 data-i18n="colSettings">Configurações da coluna</h3>
+        <label data-i18n="bgColor">Cor de fundo</label><div class="colors" id="colModalColors"></div>
+        <label data-i18n="accentColor">Cor de destaque (lateral)</label><input type="color" id="colModalAccent">
         <div id="colWidthInput" style="display:none">
-            <label>Largura proporcional (%)</label>
+            <label data-i18n="colWidth">Largura proporcional (%)</label>
             <div class="range-row">
                 <input type="range" id="colWidthPct" min="10" max="100" value="50">
                 <span class="range-val" id="colWidthPctVal">50%</span>
             </div>
         </div>
-        <div class="modal-btns"><button class="btn-ok" onclick="okColSettings()">OK</button></div>
+        <div class="modal-btns"><button class="btn-ok" onclick="okColSettings()"><span data-i18n="ok">OK</span></button></div>
     </div>
 </div>
 
 <div class="modal-overlay" id="globalModal">
     <div class="modal-box">
-        <h3>Configurações gerais</h3>
+        <h3 data-i18n="globalSettings">Configurações gerais</h3>
 
-        <label>Nome do mural</label>
+        <label data-i18n="muralName">Nome do mural</label>
         <input type="text" id="globalName" value="Mural Kanban">
 
-        <label>Cor de fundo</label>
+        <label data-i18n="bgColorTitle">Cor de fundo</label>
         <input type="color" id="globalBg" value="#0079bf">
 
-        <label>Arredondamento dos cards e colunas</label>
+        <label data-i18n="roundness">Arredondamento dos cards e colunas</label>
         <div class="range-row">
             <input type="range" id="globalRadius" min="0" max="20" value="12">
             <span class="range-val" id="globalRadiusVal">12px</span>
         </div>
 
         <div style="display:flex;align-items:center;gap:8px;">
-            <label style="margin-top:0;">Largura das colunas</label>
+            <label style="margin-top:0;" data-i18n="colWidthLabel">Largura das colunas</label>
         </div>
         <div class="radio-group">
-            <label style="display:flex;align-items:center;gap:4px;"><input type="radio" name="widthMode" value="fit"> Proporcional</label>
+            <label style="display:flex;align-items:center;gap:4px;"><input type="radio" name="widthMode" value="fit"> <span data-i18n="widthFit">Proporcional</span></label>
             <div style="display:flex;align-items:center;gap:6px;margin-left:24px;margin-top:-4px;margin-bottom:4px;">
-                <span style="font-size:11px;color:#999;">Divide a tela igualmente entre as colunas</span>
-                <button onclick="resetWidthTo('fit')" style="background:none;border:none;font-size:11px;color:#999;cursor:pointer;text-decoration:underline;padding:0;">padrao</button>
+                <span style="font-size:11px;color:#999;" data-i18n="widthFitDesc">Divide a tela igualmente entre as colunas</span>
+                <button onclick="resetWidthTo('fit')" style="background:none;border:none;font-size:11px;color:#999;cursor:pointer;text-decoration:underline;padding:0;" data-i18n="widthFitReset">padrao</button>
             </div>
-            <label style="display:flex;align-items:center;gap:4px;"><input type="radio" name="widthMode" value="absolute"> Absoluta</label>
+            <label style="display:flex;align-items:center;gap:4px;"><input type="radio" name="widthMode" value="absolute"> <span data-i18n="widthAbsolute">Absoluta</span></label>
             <div style="display:flex;align-items:center;gap:6px;margin-left:24px;margin-top:-4px;margin-bottom:4px;">
-                <span style="font-size:11px;color:#999;">Todas as colunas com largura fixa em pixels</span>
-                <button onclick="resetWidthTo('absolute')" style="background:none;border:none;font-size:11px;color:#999;cursor:pointer;text-decoration:underline;padding:0;">280px</button>
+                <span style="font-size:11px;color:#999;" data-i18n="widthAbsoluteDesc">Todas as colunas com largura fixa em pixels</span>
+                <button onclick="resetWidthTo('absolute')" style="background:none;border:none;font-size:11px;color:#999;cursor:pointer;text-decoration:underline;padding:0;" data-i18n="widthAbsoluteReset">280px</button>
             </div>
             <div class="width-input-wrap" id="absoluteWidthWrap">
                 <input type="number" id="absoluteWidth" value="280" min="100" max="2000">
                 <span>px</span>
             </div>
-            <label style="display:flex;align-items:center;gap:4px;"><input type="radio" name="widthMode" value="proportional"> Individual</label>
+            <label style="display:flex;align-items:center;gap:4px;"><input type="radio" name="widthMode" value="proportional"> <span data-i18n="widthProportional">Individual</span></label>
             <div style="display:flex;align-items:center;gap:6px;margin-left:24px;margin-top:-4px;margin-bottom:4px;">
-                <span style="font-size:11px;color:#999;">Cada coluna com largura em porcentagem (configurar em cada coluna)</span>
-                <button onclick="resetWidthTo('proportional')" style="background:none;border:none;font-size:11px;color:#999;cursor:pointer;text-decoration:underline;padding:0;">igual</button>
+                <span style="font-size:11px;color:#999;" data-i18n="widthProportionalDesc">Cada coluna com largura em porcentagem (configurar em cada coluna)</span>
+                <button onclick="resetWidthTo('proportional')" style="background:none;border:none;font-size:11px;color:#999;cursor:pointer;text-decoration:underline;padding:0;" data-i18n="widthProportionalReset">igual</button>
             </div>
         </div>
 
         <hr style="margin:20px 0;border:none;border-top:1px solid #e0e0e0;">
-        <label style="margin-top:0;">Adicionar coluna</label>
+        <label style="margin-top:0;" data-i18n="addColumn">Adicionar coluna</label>
         <div style="display:flex;gap:8px;">
-            <input type="text" id="addColName" placeholder="Nome da nova coluna" style="flex:1;margin:0;">
-            <button class="btn-cancel" onclick="addColFromSettings()" style="white-space:nowrap;flex-shrink:0;display:flex;align-items:center;">Adicionar</button>
+            <input type="text" id="addColName" data-i18n-placeholder="colPlaceholder" placeholder="Nome da nova coluna" style="flex:1;margin:0;">
+            <button class="btn-cancel" onclick="addColFromSettings()" data-i18n="add" style="white-space:nowrap;flex-shrink:0;display:flex;align-items:center;">Adicionar</button>
         </div>
 
         <hr style="margin:20px 0;border:none;border-top:1px solid #e0e0e0;">
-        <label style="margin-top:0;">Gerenciar colunas</label>
-        <p style="font-size:12px;color:#999;margin-bottom:10px;">Clique no ✕ para excluir a coluna</p>
+        <label style="margin-top:0;" data-i18n="manageColumns">Gerenciar colunas</label>
+        <p style="font-size:12px;color:#999;margin-bottom:10px;" data-i18n="manageColumnsHint">Clique no ✕ para excluir a coluna</p>
         <div id="colManagerList" style="max-height:220px;overflow-y:auto;margin-bottom:12px;"></div>
 
         <hr style="margin:20px 0;border:none;border-top:1px solid #e0e0e0;">
 
-        <label style="margin-top:0;">Op&ccedil;&otilde;es dos cards</label>
+        <label style="margin-top:0;" data-i18n="cardOptions">Op&ccedil;&otilde;es dos cards</label>
         <label style="font-weight:400;font-size:13px;margin-top:8px;display:flex;align-items:center;gap:8px;cursor:pointer;">
             <input type="checkbox" id="showTitleChk" onchange="toggleTitleOpts()" style="width:18px;height:18px;cursor:pointer;">
-            Exibir t&iacute;tulo no card
+            <span data-i18n="showTitle">Exibir t&iacute;tulo no card</span>
         </label>
         <label style="font-weight:400;font-size:13px;margin-top:4px;display:flex;align-items:center;gap:8px;cursor:pointer;padding-left:26px;" id="requireTitleWrap">
             <input type="checkbox" id="requireTitleChk" style="width:18px;height:18px;cursor:pointer;">
-            Exigir t&iacute;tulo (se desligado, pode ficar em branco)
+            <span data-i18n="requireTitle">Exigir t&iacute;tulo (se desligado, pode ficar em branco)</span>
         </label>
         <label style="font-weight:400;font-size:13px;margin-top:8px;display:flex;align-items:center;gap:8px;cursor:pointer;">
-            Alerta de deadline: quantos dias antes come&ccedil;a a reduzir a barra
+            <span data-i18n="deadlineAlert">Alerta de deadline: quantos dias antes come&ccedil;a a reduzir a barra</span>
         </label>
         <input type="number" id="deadlineAlertDays" value="7" min="1" max="90" style="width:80px;padding:6px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;margin-top:4px;">
-        <span style="font-size:13px;color:#777;margin-left:8px;">dias</span>
+        <span style="font-size:13px;color:#777;margin-left:8px;" data-i18n="days">dias</span>
 
         <hr style="margin:20px 0;border:none;border-top:1px solid #e0e0e0;">
 
-        <label style="margin-top:0;">Cores predefinidas</label>
-        <p style="font-size:12px;color:#999;margin-bottom:8px;">Altere as cores dispon&iacute;veis na paleta</p>
+        <label style="margin-top:0;" data-i18n="presetColors">Cores predefinidas</label>
+        <p style="font-size:12px;color:#999;margin-bottom:8px;" data-i18n="presetColorsHint">Altere as cores dispon&iacute;veis na paleta</p>
         <div class="palette-picker" id="palettePicker"></div>
 
-        <div class="modal-btns"><button class="btn-ok" onclick="okGlobal()">OK</button></div>
+        <hr style="margin:20px 0;border:none;border-top:1px solid #e0e0e0;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-cancel" onclick="clearTrash()" style="flex:1;min-width:120px;" data-i18n="clearTrashBtn">Esvaziar lixeira</button>
+            <button class="btn-danger" onclick="resetApp()" style="flex:1;min-width:120px;" data-i18n="resetBtn">Resetar aplicativo</button>
+        </div>
+
+        <div class="modal-btns"><button class="btn-ok" onclick="okGlobal()"><span data-i18n="ok">OK</span></button></div>
     </div>
 </div>
 
 <div class="modal-overlay" id="trashModal">
     <div class="modal-box">
-        <h3>&#128465; Lixeira</h3>
+        <h3>&#128465; <span data-i18n="trashTitle">Lixeira</span></h3>
         <div id="trashList" style="min-height:60px;"></div>
-        <div class="modal-btns"><button class="btn-ok" onclick="closeTrashModal()">OK</button></div>
+        <div class="modal-btns"><button class="btn-ok" onclick="closeTrashModal()"><span data-i18n="ok">OK</span></button></div>
     </div>
 </div>
 
@@ -235,6 +252,119 @@ if(!globalSettings || typeof globalSettings !== 'object') globalSettings = {};
 var widthMode = globalSettings.widthMode || 'fit';
 var absWidth = globalSettings.absWidth || 280;
 var palette = globalSettings.palette || ['#ffffff','#ffebee','#fff3e0','#e8f5e9','#e3f2fd','#f3e5f5','#fffde7','#e0f7fa','#fbe9e7','#f1f8e9','#ede7f6','#eceff1'];
+
+// --- I18N ---
+var lang = localStorage.getItem('kanban-lang') || 'en';
+var dict = {
+  pt: {
+    appTitle: 'Mural Kanban', trashHint: 'Arraste um card para excluir',
+    cardNewTitle: 'Nova tarefa', cardEditTitle: 'Editar tarefa',
+    title: 'Título', titlePlaceholder: 'Título da tarefa',
+    description: 'Descrição', descPlaceholder: 'Detalhes adicionais',
+    todoList: 'Lista de tarefas', todoPlaceholder: 'Nova tarefa...',
+    add: 'Adicionar', deadline: 'Deadline', done: 'Concluído?',
+    color: 'Cor', ok: 'OK',
+    titleRequired: 'Digite um título para a tarefa',
+    saveError: 'Erro ao salvar o card', apiError: 'Erro',
+    colSettings: 'Configurações da coluna', bgColor: 'Cor de fundo',
+    accentColor: 'Cor de destaque (lateral)', colWidth: 'Largura proporcional (%)',
+    colSettingsBtn: 'Configurar coluna', deleteCol: 'Excluir coluna',
+    deleteColConfirm: 'Excluir a coluna "{col}"?\n\nTodas as tarefas irão para a lixeira.',
+    deleteColFinal: 'Confirmação final: excluir "{col}"?',
+    globalSettings: 'Configurações gerais', muralName: 'Nome do mural',
+    bgColorTitle: 'Cor de fundo', roundness: 'Arredondamento dos cards e colunas',
+    colWidthLabel: 'Largura das colunas',
+    widthFit: 'Proporcional', widthFitDesc: 'Divide a tela igualmente entre as colunas',
+    widthFitReset: 'padrão', widthAbsolute: 'Absoluta',
+    widthAbsoluteDesc: 'Todas as colunas com largura fixa em pixels',
+    widthAbsoluteReset: '280px', widthProportional: 'Individual',
+    widthProportionalDesc: 'Cada coluna com largura em porcentagem (configurar em cada coluna)',
+    widthProportionalReset: 'igual',
+    addColumn: 'Adicionar coluna', colPlaceholder: 'Nome da nova coluna',
+    manageColumns: 'Gerenciar colunas', manageColumnsHint: 'Clique no ✕ para excluir a coluna',
+    noColumns: 'Nenhuma coluna', cardOptions: 'Opções dos cards',
+    showTitle: 'Exibir título no card',
+    requireTitle: 'Exigir título (se desligado, pode ficar em branco)',
+    deadlineAlert: 'Alerta de deadline: quantos dias antes começa a reduzir a barra',
+    days: 'dias', presetColors: 'Cores predefinidas',
+    presetColorsHint: 'Altere as cores disponíveis na paleta',
+    addTask: '+ Adicionar tarefa', editCard: 'Editar',
+    completed: 'Concluído', overdue: 'Vencido',
+    singleDay: '1 dia', daysLeft: '{n} dias',
+    restore: 'Restaurar', editTitlePrompt: 'Nome do mural:',
+    trashTitle: 'Lixeira', trashEmpty: 'Lixeira vazia',
+    resetBtn: 'Resetar aplicativo',
+    resetConfirm1: 'Tem certeza que deseja resetar todo o aplicativo?',
+    resetConfirm2: 'Esta ação irá apagar TODOS os cards, colunas e configurações. Deseja continuar?',
+    resetConfirm3: 'Confirmação final: resetar o aplicativo?',
+    clearTrashBtn: 'Esvaziar lixeira',
+    clearTrashConfirm1: 'Tem certeza que deseja esvaziar a lixeira?',
+    clearTrashConfirm2: 'Confirmação final: apagar todos os cards da lixeira?',
+  },
+  en: {
+    appTitle: 'Mural Kanban', trashHint: 'Drop a card here to delete',
+    cardNewTitle: 'New task', cardEditTitle: 'Edit task',
+    title: 'Title', titlePlaceholder: 'Task title',
+    description: 'Description', descPlaceholder: 'Additional details',
+    todoList: 'Checklist', todoPlaceholder: 'New item...',
+    add: 'Add', deadline: 'Deadline', done: 'Completed?',
+    color: 'Color', ok: 'OK',
+    titleRequired: 'Please enter a title for the task',
+    saveError: 'Error saving card', apiError: 'Error',
+    colSettings: 'Column settings', bgColor: 'Background color',
+    accentColor: 'Accent color (side)', colWidth: 'Proportional width (%)',
+    colSettingsBtn: 'Configure column', deleteCol: 'Delete column',
+    deleteColConfirm: 'Delete column "{col}"?\n\nAll cards will be moved to trash.',
+    deleteColFinal: 'Final confirmation: delete "{col}"?',
+    globalSettings: 'Global settings', muralName: 'Board name',
+    bgColorTitle: 'Background color', roundness: 'Card and column roundness',
+    colWidthLabel: 'Column width',
+    widthFit: 'Fit', widthFitDesc: 'Divides screen equally between columns',
+    widthFitReset: 'default', widthAbsolute: 'Fixed',
+    widthAbsoluteDesc: 'All columns with fixed pixel width',
+    widthAbsoluteReset: '280px', widthProportional: 'Individual',
+    widthProportionalDesc: 'Each column with percentage width (configure per column)',
+    widthProportionalReset: 'equal',
+    addColumn: 'Add column', colPlaceholder: 'New column name',
+    manageColumns: 'Manage columns', manageColumnsHint: 'Click ✕ to delete the column',
+    noColumns: 'No columns', cardOptions: 'Card options',
+    showTitle: 'Show title on card',
+    requireTitle: 'Require title (if off, title can be blank)',
+    deadlineAlert: 'Deadline alert: how many days before the bar starts shrinking',
+    days: 'days', presetColors: 'Preset colors',
+    presetColorsHint: 'Change the available colors in the palette',
+    addTask: '+ Add task', editCard: 'Edit',
+    completed: 'Completed', overdue: 'Overdue',
+    singleDay: '1 day', daysLeft: '{n} days',
+    restore: 'Restore', editTitlePrompt: 'Board name:',
+    trashTitle: 'Trash', trashEmpty: 'Trash is empty',
+    resetBtn: 'Reset app',
+    resetConfirm1: 'Are you sure you want to reset the entire app?',
+    resetConfirm2: 'This will delete ALL cards, columns, and settings. Continue?',
+    resetConfirm3: 'Final confirmation: reset the app?',
+    clearTrashBtn: 'Clear trash',
+    clearTrashConfirm1: 'Are you sure you want to clear the trash?',
+    clearTrashConfirm2: 'Final confirmation: delete all trashed cards?',
+  }
+};
+function __(k, p) {
+  var v = (dict[lang] && dict[lang][k]) || dict['en'][k] || k;
+  if (p) for (var x in p) v = v.replace(new RegExp('\\{'+x+'\\}','g'), p[x]);
+  return v;
+}
+function applyLang() {
+  document.querySelectorAll('[data-i18n]').forEach(function(e){ e.textContent = __(e.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function(e){ e.placeholder = __(e.getAttribute('data-i18n-placeholder')); });
+  document.querySelectorAll('[data-i18n-title]').forEach(function(e){ e.title = __(e.getAttribute('data-i18n-title')); });
+  document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
+  document.querySelectorAll('.lang-btn').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-lang') === lang); });
+}
+function setLang(l) {
+  lang = l;
+  try { localStorage.setItem('kanban-lang', l); } catch(e) {}
+  applyLang();
+  refresh();
+}
 
 // --- API ---
 function api(url, opts){
@@ -361,14 +491,14 @@ function renderCol(c){
     ti.onblur=function(){ti.value=ti.value.trim()||c.title;};
     var cnt = document.createElement('span'); cnt.className='col-count'; cnt.id='cnt-'+c.id; cnt.textContent='0';
     var btns = document.createElement('div'); btns.className='col-btns';
-    var setBtn = document.createElement('button'); setBtn.textContent='\u2699'; setBtn.title='Configurar coluna';
+    var setBtn = document.createElement('button'); setBtn.textContent='\u2699'; setBtn.title=__('colSettingsBtn');
     setBtn.onclick=function(e){e.stopPropagation();e.preventDefault();openColModal(c);};
     btns.appendChild(setBtn);
     h.appendChild(ti); h.appendChild(cnt); h.appendChild(btns); col.appendChild(h);
     var body = document.createElement('div'); body.className='col-body'; body.id='body-'+c.id; col.appendChild(body);
     var acb = document.createElement('button');
     acb.style.cssText='background:none;border:none;color:#444;padding:8px;border-radius:8px;text-align:left;font-size:13px;width:100%;cursor:pointer;flex-shrink:0;';
-    acb.textContent='+ Adicionar tarefa';
+    acb.textContent=__('addTask');
     acb.onclick=function(e){e.stopPropagation();openCardModal(c.id);};
     col.appendChild(acb);
     var board = document.getElementById('board');
@@ -465,7 +595,7 @@ function addTodoItem(){
 
 function openCardModal(colId,cardId){
     editCardColId=colId;editCardId=cardId;selectedCardColor='#ffffff';
-    document.getElementById('cardModalTitle').textContent=cardId?'Editar tarefa':'Nova tarefa';
+    document.getElementById('cardModalTitle').textContent=cardId?__('cardEditTitle'):__('cardNewTitle');
     var showTitle=globalSettings.showTitle!==false;
     var requireTitle=globalSettings.requireTitle===true && showTitle;
     var titleEl=document.getElementById('cardModalTitleInput');
@@ -523,7 +653,7 @@ function saveCard(){
     var showTitle=globalSettings.showTitle!==false;
     var requireTitle=globalSettings.requireTitle===true && showTitle;
     var title=document.getElementById('cardModalTitleInput').value.trim();
-    if(requireTitle && !title){alert('Digite um titulo para a tarefa');return;}
+    if(requireTitle && !title){alert(__('titleRequired'));return;}
     if(!showTitle) title='';
     var deadline=null;
     if(document.getElementById('deadlineChk').checked){
@@ -532,7 +662,7 @@ function saveCard(){
     var data={column_id:editCardColId,title:title,description:document.getElementById('cardModalDesc').value.trim(),color:selectedCardColor,deadline:deadline,done:document.getElementById('modalDoneChk').checked?1:0};
     var url,method; if(editCardId){url='/cards/'+editCardId;method='PUT';}else{url='/cards';method='POST';}
     api(url,{method:method,body:JSON.stringify(data)}).then(function(card){
-        if(!card){alert('Erro ao salvar o card');return;}
+        if(!card){alert(__('saveError'));return;}
         var cid=card.id||editCardId;
         var promises=[];
         for(var i=0;i<pendingTodos.length;i++){
@@ -544,7 +674,7 @@ function saveCard(){
             }
         }
         Promise.all(promises).then(function(){closeCardModal();refresh();});
-    }).catch(function(e){alert('Erro: '+e);});
+    }).catch(function(e){alert(__('apiError')+': '+e);});
 }
 
 // --- CARD PROGRESS ---
@@ -643,7 +773,7 @@ function renderCard(c, container){
 
         var barWrap=document.createElement('div');
         barWrap.style.cssText='background:#e0e0e0;border-radius:3px;height:6px;overflow:hidden;';
-        barWrap.title='Data: '+c.deadline;
+        barWrap.title=c.deadline;
 
         var bar=document.createElement('div');
         bar.style.cssText='height:100%;border-radius:3px;transition:width 0.3s;';
@@ -687,10 +817,10 @@ function renderCard(c, container){
         dateLabel.textContent=c.deadline;
         var label=document.createElement('span');
         label.style.cssText='font-size:11px;color:#888;';
-        if(cardDone) label.textContent='Concluido';
-        else if(diffDays<=0) {label.textContent='Vencido';d.style.border='2px solid #e53935';}
-        else if(diffDays===1) label.textContent='1 dia';
-        else label.textContent=diffDays+' dias';
+        if(cardDone) label.textContent=__('completed');
+        else if(diffDays<=0) {label.textContent=__('overdue');d.style.border='2px solid #e53935';}
+        else if(diffDays===1) label.textContent=__('singleDay');
+        else label.textContent=__('daysLeft',{n:diffDays});
 
         barCol.appendChild(barWrap);
         barCol.appendChild(labelWrap);
@@ -702,7 +832,7 @@ function renderCard(c, container){
     }
 
     var act=document.createElement('div');act.className='card-act';
-    var eb=document.createElement('button');eb.textContent='\u270E';eb.title='Editar';
+    var eb=document.createElement('button');eb.textContent='\u270E';eb.title=__('editCard');
     eb.onclick=function(e){e.stopPropagation();openCardModal(c.column_id,c.id);};
     act.appendChild(eb);d.appendChild(act);container.appendChild(d);
 }
@@ -784,7 +914,7 @@ function buildColManager(){
     var list=document.getElementById('colManagerList'); list.innerHTML='';
     var sorted=columns.slice().sort(function(a,b){return a.order_index-b.order_index;});
     if(sorted.length===0){
-        list.innerHTML='<p style="color:#999;font-size:13px;text-align:center;padding:10px;">Nenhuma coluna</p>';
+        list.innerHTML='<p style="color:#999;font-size:13px;text-align:center;padding:10px;">'+__('noColumns')+'</p>';
         return;
     }
     for(var i=0;i<sorted.length;i++){
@@ -800,14 +930,14 @@ function buildColManager(){
             cnt.textContent='...';
             var delBtn=document.createElement('button');
             delBtn.textContent='\u2715';
-            delBtn.title='Excluir coluna';
+            delBtn.title=__('deleteCol');
             delBtn.style.cssText='background:transparent;border:none;font-size:16px;cursor:pointer;color:#555;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;';
             delBtn.onmouseover=function(){this.style.background='#ffebee';this.style.color='#d32f2f';};
             delBtn.onmouseout=function(){this.style.background='';this.style.color='#555';};
             delBtn.onclick=function(e){
                 e.stopPropagation();
-                if(!confirm('Excluir a coluna "'+col.title+'"?\n\nTodas as tarefas irão para a lixeira.')) return;
-                if(!confirm('Confirmação final: excluir "'+col.title+'"?')) return;
+                if(!confirm(__('deleteColConfirm',{col:col.title}))) return;
+                if(!confirm(__('deleteColFinal',{col:col.title}))) return;
                 api('/columns/'+col.id,{method:'DELETE'}).then(function(){
                     api('/columns').then(function(data){
                         if(data) columns=data;
@@ -858,7 +988,7 @@ function okGlobal(){
 function openTrashModal(){
     api('/cards/trash').then(function(cards){
         var list=document.getElementById('trashList'); list.innerHTML='';
-        if(!cards||cards.length===0) list.innerHTML='<p style="color:#999;font-size:14px;text-align:center;padding:20px;">Lixeira vazia</p>';
+        if(!cards||cards.length===0) list.innerHTML='<p style="color:#999;font-size:14px;text-align:center;padding:20px;">'+__('trashEmpty')+'</p>';
         else{
             for(var i=0;i<cards.length;i++){
                 var item=document.createElement('div');
@@ -867,7 +997,7 @@ function openTrashModal(){
                 dot.style.cssText='width:12px;height:12px;border-radius:50%;flex-shrink:0;';
                 dot.style.backgroundColor=cards[i].color||'#fff';
                 var t=document.createElement('span');t.style.cssText='flex:1;font-size:14px;';t.textContent=cards[i].title;
-                var rb=document.createElement('button');rb.textContent='Restaurar';
+                var rb=document.createElement('button');rb.textContent=__('restore');
                 rb.style.cssText='padding:6px 14px;border:none;border-radius:6px;background:#0079bf;color:#fff;font-size:13px;cursor:pointer;font-weight:600;';
                 rb.onclick=(function(cid){return function(){api('/cards/'+cid+'/restore',{method:'PUT'}).then(function(){openTrashModal();loadTrash();refresh();});};})(cards[i].id);
                 item.appendChild(dot);item.appendChild(t);item.appendChild(rb);list.appendChild(item);
@@ -877,15 +1007,36 @@ function openTrashModal(){
 }
 function closeTrashModal(){document.getElementById('trashModal').classList.remove('show');}
 
+// --- RESET / CLEAR ---
+function resetApp(){
+    if(!confirm(__('resetConfirm1'))) return;
+    if(!confirm(__('resetConfirm2'))) return;
+    if(!confirm(__('resetConfirm3'))) return;
+    api('/reset',{method:'POST'}).then(function(){
+        try { localStorage.removeItem('kanban-settings'); localStorage.removeItem('kanban-lang'); } catch(e) {}
+        globalSettings = {}; palette = ['#ffffff','#ffebee','#fff3e0','#e8f5e9','#e3f2fd','#f3e5f5','#fffde7','#e0f7fa','#fbe9e7','#f1f8e9','#ede7f6','#eceff1'];
+        widthMode='fit'; absWidth=280;
+        window.location.href = window.location.href.split('?')[0] + '?_=' + Date.now();
+    }).catch(function(){alert(__('apiError'));});
+}
+function clearTrash(){
+    if(!confirm(__('clearTrashConfirm1'))) return;
+    if(!confirm(__('clearTrashConfirm2'))) return;
+    api('/cards/trash/clear',{method:'DELETE'}).then(function(){
+        loadTrash();
+        if(document.getElementById('trashModal').classList.contains('show')) openTrashModal();
+    });
+}
+
 // --- EDIT TITLE ---
 function editTitle(){
     var current=document.getElementById('muralTitle').textContent;
-    var name=prompt('Nome do mural:',current);
+    var name=prompt(__('editTitlePrompt'),current);
     if(name&&name.trim()){globalSettings.name=name.trim();saveGlobalState();}
 }
 
 // --- INIT ---
-applySettings();refresh();
+applySettings();applyLang();refresh();
 
 // ---- EVENTOS ----
 document.getElementById('cardModal').onclick=function(e){if(e.target===this) closeCardModal();};
