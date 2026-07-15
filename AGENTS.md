@@ -36,13 +36,16 @@ docker run -d -p 8080:5000 -v mural-k-data:/data --name mural-k mural-k
 
 Container exposes port 5000 (mapped to 8080). Data persists in `/data/k.sqlite`.
 
+Multi-stage build: builder stage installs Python packages, final image is Alpine + Python + app only (~86MB compressed).
+
 ## CI/CD
 
 `.github/workflows/docker-push.yml` triggers on:
-- Push to `main` → pushes `katzzero/mural-k:latest`
-- Push tag `v*` → pushes semver tags (`v1.2.3`, `1.2`, `1`)
+- Push to `main` → pushes `katzzero/mural-k:latest` + `ghcr.io/<owner>/mural-k:latest`
+- Push tag `v*` → pushes semver tags to both registries
+- PR → builds only (no push)
 
-Docker Hub credentials stored in secrets `DOCKER_USERNAME` / `DOCKER_PASSWORD`.
+Docker Hub secrets: `DOCKER_USERNAME` / `DOCKER_PASSWORD`. GHCR uses `GITHUB_TOKEN` (automatic).
 
 ## Key Gotchas
 

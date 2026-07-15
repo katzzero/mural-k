@@ -1,0 +1,16 @@
+.git
+.github
+.gitignore
+.gitattributes
+.dockerignore
+LICENSE
+README.md
+AGENTS.md
+data/
+__pycache__/
+*.py[cod]
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
