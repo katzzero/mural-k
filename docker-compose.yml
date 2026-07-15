@@ -1,8 +1,7 @@
-version: '3.8'
-
 services:
   mural-k:
     image: katzzero/mural-k
+    # or: image: ghcr.io/katzzero/mural-k
     container_name: mural-k
     ports:
       - "8080:5000"
