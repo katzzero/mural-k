@@ -414,14 +414,14 @@ function loadTrash(){
 }
 
 // --- RENDER ---
-function renderBoard(){
+function renderBoard(allCards){
     var board = document.getElementById('board');
     board.innerHTML = '';
     columns.sort(function(a,b){ return a.order_index - b.order_index; });
-    for(var i=0;i<columns.length;i++) renderCol(columns[i]);
+    for(var i=0;i<columns.length;i++) renderCol(columns[i], allCards || []);
 }
 
-function renderCol(c){
+function renderCol(c, cards){
     var col = document.createElement('div');
     col.className = 'col';
     col.setAttribute('data-cid', c.id);
@@ -504,17 +504,18 @@ function renderCol(c){
     var board = document.getElementById('board');
     board.appendChild(col);
 
-    api('/columns/'+c.id+'/cards').then(function(cards){
-        if(!cards) return;
-        cnt.textContent=cards.length;
-        cards.sort(function(a,b){return a.order_index-b.order_index;});
-        for(var i=0;i<cards.length;i++) renderCard(cards[i], body);
-    });
+    var colCards = cards.filter(function(card){ return card.column_id === c.id; });
+    cnt.textContent = colCards.length;
+    for(var i=0;i<colCards.length;i++) renderCard(colCards[i], body);
 }
 
 function refresh(){
-    api('/columns').then(function(data){
-        if(data){columns=data;renderBoard();}loadTrash();
+    Promise.all([api('/columns'), api('/cards')]).then(function(results){
+        var cols = results[0];
+        var cards = results[1];
+        if(cols) columns = cols;
+        renderBoard(cards || []);
+        loadTrash();
     }).catch(function(){loadTrash();});
 }
 
@@ -848,6 +849,10 @@ function openColModal(c){
     } else wWrap.style.display='none';
     document.getElementById('colModal').classList.add('show');
 }
+function closeColModal(){
+    document.getElementById('colModal').classList.remove('show');
+    editColId=null;
+}
 function okColSettings(){
     if(!editColId) return;
     var data={background_color:selectedColColor,accent_color:document.getElementById('colModalAccent').value};
@@ -963,6 +968,9 @@ function toggleTitleOpts(){
     var show=document.getElementById('showTitleChk').checked;
     document.getElementById('requireTitleWrap').style.display=show?'flex':'none';
 }
+function closeGlobalModal(){
+    document.getElementById('globalModal').classList.remove('show');
+}
 function okGlobal(){
     // Read all values
     globalSettings.name=document.getElementById('globalName').value.trim()||'Mural Kanban';
@@ -1040,8 +1048,8 @@ applySettings();applyLang();refresh();
 
 // ---- EVENTOS ----
 document.getElementById('cardModal').onclick=function(e){if(e.target===this) closeCardModal();};
-document.getElementById('colModal').onclick=function(e){if(e.target===this) okColSettings();};
-document.getElementById('globalModal').onclick=function(e){if(e.target===this) okGlobal();};
+document.getElementById('colModal').onclick=function(e){if(e.target===this) closeColModal();};
+document.getElementById('globalModal').onclick=function(e){if(e.target===this) closeGlobalModal();};
 document.getElementById('trashModal').onclick=function(e){if(e.target===this) closeTrashModal();};
 document.getElementById('globalRadius').oninput=function(){
     document.getElementById('globalRadiusVal').textContent=this.value+'px';
@@ -1055,8 +1063,8 @@ for(var i=0;i<radios.length;i++) radios[i].onchange=function(){toggleWidthOption
 document.onkeydown=function(e){
     if(e.key==='Escape'){
         if(document.getElementById('trashModal').classList.contains('show'))closeTrashModal();
-        else if(document.getElementById('globalModal').classList.contains('show'))okGlobal();
-        else if(document.getElementById('colModal').classList.contains('show'))okColSettings();
+        else if(document.getElementById('globalModal').classList.contains('show'))closeGlobalModal();
+        else if(document.getElementById('colModal').classList.contains('show'))closeColModal();
         else if(document.getElementById('cardModal').classList.contains('show'))closeCardModal();
     }
 };

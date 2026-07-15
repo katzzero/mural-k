@@ -19,7 +19,14 @@ def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
     return conn
+
+def get_json():
+    data = request.get_json(silent=True)
+    if data is None:
+        return None, ('Invalid JSON', 400)
+    return data, None
 
 def init_db():
     conn = get_db()
@@ -89,7 +96,9 @@ def get_columns():
 
 @app.route('/api/columns', methods=['POST'])
 def create_column():
-    data = request.get_json()
+    data, err = get_json()
+    if err:
+        return jsonify({'error': err[0]}), err[1]
     if not data or 'title' not in data:
         return jsonify({'error': 'title is required'}), 400
     title = data['title'].strip()
@@ -111,7 +120,9 @@ def create_column():
 
 @app.route('/api/columns/<int:col_id>', methods=['PUT'])
 def update_column(col_id):
-    data = request.get_json()
+    data, err = get_json()
+    if err:
+        return jsonify({'error': err[0]}), err[1]
     if not data:
         return jsonify({'error': 'request body is required'}), 400
     conn = get_db()
@@ -151,9 +162,20 @@ def get_cards(col_id):
     finally:
         conn.close()
 
+@app.route('/api/cards', methods=['GET'])
+def get_all_cards():
+    conn = get_db()
+    try:
+        rows = conn.execute('SELECT * FROM cards WHERE trashed = 0 ORDER BY column_id, order_index').fetchall()
+        return jsonify([dict(r) for r in rows])
+    finally:
+        conn.close()
+
 @app.route('/api/cards', methods=['POST'])
 def create_card():
-    data = request.get_json()
+    data, err = get_json()
+    if err:
+        return jsonify({'error': err[0]}), err[1]
     if not data or 'column_id' not in data or 'title' not in data:
         return jsonify({'error': 'column_id and title are required'}), 400
     conn = get_db()
@@ -178,7 +200,9 @@ def create_card():
 
 @app.route('/api/cards/<int:card_id>', methods=['PUT'])
 def update_card(card_id):
-    data = request.get_json()
+    data, err = get_json()
+    if err:
+        return jsonify({'error': err[0]}), err[1]
     if not data:
         return jsonify({'error': 'request body is required'}), 400
     conn = get_db()
@@ -226,7 +250,9 @@ def get_todos(card_id):
 
 @app.route('/api/todos', methods=['POST'])
 def create_todo():
-    data = request.get_json()
+    data, err = get_json()
+    if err:
+        return jsonify({'error': err[0]}), err[1]
     if not data or 'card_id' not in data or 'text' not in data:
         return jsonify({'error': 'card_id and text are required'}), 400
     conn = get_db()
@@ -248,7 +274,9 @@ def create_todo():
 
 @app.route('/api/todos/<int:todo_id>', methods=['PUT'])
 def update_todo(todo_id):
-    data = request.get_json()
+    data, err = get_json()
+    if err:
+        return jsonify({'error': err[0]}), err[1]
     if not data:
         return jsonify({'error': 'request body is required'}), 400
     conn = get_db()
@@ -319,7 +347,9 @@ def restore_card(card_id):
 
 @app.route('/api/cards/reorder', methods=['POST'])
 def reorder_cards():
-    data = request.get_json()
+    data, err = get_json()
+    if err:
+        return jsonify({'error': err[0]}), err[1]
     if not data or not isinstance(data, list):
         return jsonify({'error': 'array of card objects is required'}), 400
     conn = get_db()
@@ -366,7 +396,6 @@ def clear_trash():
 def health():
     return 'OK'
 
-init_db()
-
 if __name__ == '__main__':
+    init_db()
     app.run(host='0.0.0.0', port=5000, debug=False)

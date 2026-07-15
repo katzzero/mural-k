@@ -46,17 +46,14 @@ Docker Hub credentials stored in secrets `DOCKER_USERNAME` / `DOCKER_PASSWORD`.
 
 ## Key Gotchas
 
-- **No FOREIGN KEY enforcement**: `PRAGMA foreign_keys` is never set to ON. `ON DELETE CASCADE` in schema is inert.
-- **`init_db()` runs on import**: `app.py:369` calls `init_db()` at module level, not guarded by `if __name__`. Every worker process re-runs migrations.
 - **Race condition on order_index**: `MAX(order_index)+1` in create endpoints is not atomic. Concurrent requests can produce duplicate order values.
-- **Frontend is monolithic**: All JS/CSS is inline in `index.html`. No modules, no imports, all globals. Any edit affects the full 1073 lines.
-- **Escape key saves**: In global settings modal, pressing Escape calls `okGlobal()` (saves), not cancel (`app.py:1058`).
-- **N+1 card fetching**: `renderCol()` calls `/api/columns/:id/cards` per column individually.
+- **Frontend is monolithic**: All JS/CSS is inline in `index.html`. No modules, no imports, all globals. Any edit affects the full 1077 lines.
 
 ## API Notes
 
 - All endpoints return JSON (except DELETE which returns 204 empty).
-- `POST /api/reset` wipes everything and re-creates 3 default columns (Portuese names: "A Fazer", "Em Andamento", "Concluído").
+- `GET /api/cards` returns all non-trashed cards (used by frontend to avoid N+1 queries).
+- `POST /api/reset` wipes everything and re-creates 3 default columns (Portuguese names: "A Fazer", "Em Andamento", "Concluído").
 - `DELETE /api/cards/:id` soft-deletes (sets `trashed=1`). Use `/api/cards/trash/clear` for hard delete.
 
 ## Env Vars
